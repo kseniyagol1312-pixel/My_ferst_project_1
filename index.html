@@ -1,0 +1,1326 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Candidate Evidence Matrix</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: sticky top bar → vacancy strip → one working view; candidate card is a 70% right drawer, forms are modals. */
+:root{
+  --bg:#F8FAFC; --surface:#FFFFFF; --text:#0F172A; --muted:#64748B; --faint:#94A3B8;
+  --primary:#2563EB; --primary-soft:#EFF6FF; --primary-line:#BFDBFE;
+  --ok:#0F766E; --ok-soft:#E6F4F1; --ok-line:#A7D7CF;
+  --warn:#D97706; --warn-soft:#FEF3E2; --warn-line:#F7D19B;
+  --risk:#DC2626; --risk-soft:#FDECEC; --risk-line:#F5B5B5;
+  --gray-soft:#F1F5F9; --border:#E2E8F0; --border-strong:#CBD5E1;
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 1px 3px rgba(15,23,42,.05);
+  --shadow-lg:0 10px 30px rgba(15,23,42,.12);
+  --font:"Inter",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --r:10px; --r-lg:12px;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{background:var(--bg);color:var(--text)}
+body{font-family:var(--font);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+button:disabled{cursor:not-allowed}
+:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}
+.gutter{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.muted{color:var(--muted)}
+.small{font-size:12px}
+.h-label{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+
+/* Top nav */
+.topnav{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--border)}
+.topnav-in{display:flex;align-items:center;gap:20px;min-height:56px;flex-wrap:wrap;padding-block:8px}
+.brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;white-space:nowrap}
+.brand-mark{width:22px;height:22px;border-radius:6px;background:var(--primary);display:grid;grid-template-columns:1fr 1fr;gap:2px;padding:4px}
+.brand-mark i{background:#fff;border-radius:1px;opacity:.95}
+.brand-mark i:nth-child(2){opacity:.55}.brand-mark i:nth-child(3){opacity:.55}
+.demo-chip{font-size:11px;font-weight:600;color:var(--muted);border:1px solid var(--border);border-radius:999px;padding:1px 8px}
+.tabs{display:flex;gap:2px;background:var(--gray-soft);padding:3px;border-radius:9px}
+.tab{border:0;background:transparent;padding:6px 14px;border-radius:7px;font-weight:500;color:var(--muted)}
+.tab.active{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:10px;position:relative}
+.nav-vac{font-weight:600;font-size:13px;white-space:nowrap}
+.icon-btn{border:1px solid var(--border);background:var(--surface);border-radius:8px;width:32px;height:32px;display:grid;place-items:center;color:var(--muted)}
+.icon-btn:hover{background:var(--gray-soft);color:var(--text)}
+.menu{position:absolute;right:0;top:40px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow-lg);padding:4px;min-width:230px;z-index:30}
+.menu button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:8px 10px;border-radius:7px}
+.menu button:hover{background:var(--gray-soft)}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:7px 12px;font-weight:500;font-size:13px;white-space:nowrap;line-height:1.2}
+.btn:hover:not(:disabled){background:var(--gray-soft)}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn.primary:hover:not(:disabled){background:#1D4ED8}
+.btn.danger{background:var(--risk);border-color:var(--risk);color:#fff}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--primary)}
+.btn.ghost:hover:not(:disabled){background:var(--primary-soft)}
+.btn.sm{padding:4px 9px;font-size:12px}
+.btn:disabled{opacity:.45}
+
+/* Workspace strip */
+main{padding-block:20px 48px;max-width:1440px;margin:0 auto}
+.ws{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:16px 18px;display:flex;flex-wrap:wrap;align-items:center;gap:14px 24px;box-shadow:var(--shadow)}
+.ws-title{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ws-title h1{font-size:18px;margin:0;font-weight:700;letter-spacing:-.01em}
+.ws-meta{display:flex;flex-wrap:wrap;gap:6px 18px}
+.ws-meta div{display:flex;flex-direction:column;gap:1px}
+.ws-meta b{font-weight:600;font-size:13px}
+.ws-actions{margin-left:auto;display:flex;gap:8px}
+
+/* Badges */
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:500;border-radius:999px;padding:2px 9px;border:1px solid transparent;white-space:nowrap;line-height:1.5}
+.badge .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.b-ok{background:var(--ok-soft);color:var(--ok);border-color:var(--ok-line)}
+.b-warn{background:var(--warn-soft);color:#B45309;border-color:var(--warn-line)}
+.b-risk{background:var(--risk-soft);color:var(--risk);border-color:var(--risk-line)}
+.b-blue{background:var(--primary-soft);color:var(--primary);border-color:var(--primary-line)}
+.b-gray{background:var(--gray-soft);color:var(--muted);border-color:var(--border)}
+.b-req{background:var(--surface);color:var(--text);border-color:var(--border-strong);font-size:11px;padding:0 7px}
+.b-next{background:var(--gray-soft);color:var(--muted);border:1px dashed var(--border-strong);font-size:11px;padding:0 7px}
+
+/* KPI */
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:16px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px}
+.kpi .v{font-size:22px;font-weight:700;margin-top:2px;letter-spacing:-.01em}
+.kpi .s{font-size:12px;color:var(--muted)}
+
+/* Toolbar */
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:16px 0 10px}
+.search{position:relative;flex:1 1 240px;max-width:340px}
+.search input{width:100%;padding:7px 10px 7px 32px;border:1px solid var(--border);border-radius:8px;background:var(--surface)}
+.search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--faint)}
+.select{padding:7px 28px 7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2364748B' stroke-width='1.5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+.seg{display:inline-flex;background:var(--gray-soft);border-radius:8px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:500;color:var(--muted)}
+.seg button.on{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
+.spacer{flex:1}
+
+/* Tables */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--shadow)}
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:separate;border-spacing:0;width:100%}
+.tbl th{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);background:#FBFCFE;white-space:nowrap}
+.tbl td{padding:11px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:0}
+.tbl tbody tr.row{cursor:pointer}
+.tbl tbody tr.row:hover td{background:#FAFBFD}
+.tbl tbody tr.row.sel td{background:#F5F9FF}
+.cname{font-weight:600}
+.cname-wrap{display:flex;align-items:center;gap:10px;min-width:220px}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--gray-soft);border:1px solid var(--border);display:grid;place-items:center;font-size:12px;font-weight:600;color:var(--muted);flex:none}
+.avatar.lg{width:48px;height:48px;font-size:16px}
+.warn-line{display:flex;gap:5px;align-items:flex-start;color:#B45309;font-size:12px;margin-top:3px;max-width:320px}
+.warn-line svg{flex:none;margin-top:2px}
+.bar{display:flex;align-items:center;gap:8px;min-width:120px}
+.bar .track{flex:1;height:6px;background:var(--gray-soft);border-radius:99px;overflow:hidden;min-width:56px}
+.bar .fill{height:100%;border-radius:99px}
+.bar b{font-weight:600;min-width:36px;text-align:right}
+.chk{width:16px;height:16px;accent-color:var(--primary);cursor:pointer}
+.empty{padding:40px 16px;text-align:center;color:var(--muted)}
+.empty b{display:block;color:var(--text);margin-bottom:4px;font-size:14px}
+
+/* Matrix */
+.mx-wrap{overflow:auto;max-height:calc(100vh - 260px);min-height:320px;border-radius:var(--r-lg)}
+.mx{min-width:640px}
+.mx th,.mx td{border-bottom:1px solid var(--border);border-right:1px solid var(--border);padding:8px 10px;background:var(--surface)}
+.mx thead th{position:sticky;top:0;z-index:3;text-align:left;vertical-align:bottom;background:#FBFCFE}
+.mx .first{text-align:left;position:sticky;left:0;z-index:2;min-width:230px;max-width:260px;background:var(--surface)}
+.mx thead .first{z-index:4;background:#FBFCFE}
+.mx tr > :last-child{border-right:0}
+.mx-head{display:flex;flex-direction:column;gap:4px;min-width:170px}
+.mx-head button.link{border:0;background:none;padding:0;text-align:left;font-weight:600;font-size:14px;color:var(--text)}
+.mx-head button.link:hover{color:var(--primary)}
+.mx-head label{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted);font-weight:500;text-transform:none;letter-spacing:0;cursor:pointer}
+.crit-name{font-weight:500;display:flex;flex-direction:column;gap:3px}
+.crit-name .meta{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted)}
+.mcell{width:100%;border:1px solid transparent;border-radius:8px;padding:7px 9px;text-align:left;display:flex;align-items:center;gap:8px;min-height:42px;background:var(--gray-soft)}
+.mcell:hover{border-color:var(--border-strong)}
+.mcell .sc{font-size:18px;font-weight:700;min-width:16px}
+.mcell .lbl{font-size:12px;line-height:1.25}
+.mcell .ev{margin-left:auto;width:8px;height:8px;border-radius:50%;flex:none;border:1.5px solid currentColor}
+.mcell .ev.has{background:currentColor}
+.t-ok{background:var(--ok-soft);color:var(--ok)}
+.t-blue{background:var(--primary-soft);color:var(--primary)}
+.t-risk{background:var(--risk-soft);color:var(--risk)}
+.t-warn{background:var(--warn-soft);color:#B45309}
+.t-gray{background:var(--gray-soft);color:var(--muted)}
+.mcell.dim{opacity:.38}
+.mx tr.sum td,.mx tr.sum th{background:#FBFCFE}
+.mx tr.sum-first td,.mx tr.sum-first th{border-top:2px solid var(--border-strong)}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 10px;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
+
+/* Drawer */
+.overlay{position:fixed;inset:0;background:rgba(15,23,42,.32);z-index:40}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:70vw;max-width:1180px;background:var(--bg);z-index:41;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);border-left:1px solid var(--border);padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);padding-right:env(safe-area-inset-right,0px)}
+.drawer.compact{width:440px;max-width:100vw}
+.d-head{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 20px 0}
+.d-top{display:flex;gap:14px;align-items:flex-start}
+.d-top h2{margin:0;font-size:18px;font-weight:700}
+.d-stats{display:flex;flex-wrap:wrap;gap:8px 22px;margin:14px 0 4px}
+.d-stats div{display:flex;flex-direction:column;gap:2px}
+.d-stats b{font-size:15px;font-weight:700}
+.d-tabs{display:flex;gap:4px;margin-top:12px;overflow-x:auto}
+.d-tab{border:0;background:none;padding:10px 12px;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap}
+.d-tab.active{color:var(--text);border-bottom-color:var(--primary)}
+.d-body{flex:1;overflow-y:auto;padding:18px 20px 28px}
+.d-close{margin-left:auto}
+.stage-sel{font-size:13px;padding:4px 26px 4px 8px}
+
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:16px}
+.panel + .panel{margin-top:14px}
+.panel-h{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.panel-h h3{margin:0;font-size:14px;font-weight:600}
+.panel-h .act{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.kv{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px 18px}
+.kv div{min-width:0}
+.kv b{display:block;font-weight:500;overflow-wrap:anywhere}
+.text-block{white-space:pre-wrap;line-height:1.55;max-width:80ch;overflow-wrap:anywhere}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:12px}
+.fact{background:var(--gray-soft);border-radius:8px;padding:9px 11px}
+.fact b{display:block;font-size:15px;font-weight:600;margin-top:2px}
+.upload{border:1px dashed var(--border-strong);border-radius:10px;padding:14px;display:flex;gap:12px;align-items:center;background:var(--surface);width:100%;text-align:left}
+.upload:hover{background:#FBFCFE}
+
+/* Eval cards */
+.ecards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.ecard{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px;display:flex;flex-direction:column;gap:10px;border-top:3px solid var(--border)}
+.ecard.t-ok-b{border-top-color:var(--ok)}.ecard.t-blue-b{border-top-color:var(--primary)}.ecard.t-risk-b{border-top-color:var(--risk)}.ecard.t-warn-b{border-top-color:var(--warn)}.ecard.t-gray-b{border-top-color:var(--border-strong)}
+.ecard-h{display:flex;gap:8px;align-items:flex-start}
+.ecard-h h4{margin:0;font-size:14px;font-weight:600;flex:1}
+.score-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.score-pill{white-space:nowrap;font-weight:700;font-size:13px;border-radius:7px;padding:3px 9px}
+.quote{border-left:3px solid var(--border-strong);padding:2px 0 2px 10px;color:var(--text);font-size:13px}
+.quote.empty-q{color:var(--faint);border-left-color:var(--border)}
+.field-row{font-size:13px}
+.field-row span{color:var(--muted);font-size:12px;display:block}
+.qbox{background:var(--primary-soft);border-radius:8px;padding:8px 10px;font-size:13px;color:#1E3A8A}
+.qbox span{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--primary);margin-bottom:2px}
+.ecard .foot{margin-top:auto;display:flex;justify-content:flex-end}
+
+/* Interview cards */
+.icards{display:grid;gap:10px}
+.icard{border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:var(--surface);display:grid;gap:6px}
+.icard-h{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.icard-h b{font-weight:600}
+
+/* Summary */
+.sum-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.sum-list{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+.sum-list li{display:flex;gap:8px;align-items:flex-start;font-size:13px}
+.sum-list li .badge{flex:none}
+.disclaimer{margin-top:16px;border:1px solid var(--border);background:var(--surface);border-radius:10px;padding:10px 14px;font-size:12px;color:var(--muted);display:flex;gap:8px;align-items:center}
+.disclaimer svg{flex:none;color:var(--faint)}
+.callout{border-radius:10px;padding:10px 12px;font-size:13px;display:flex;gap:8px;align-items:flex-start}
+.callout.warn{background:var(--warn-soft);color:#92400E;border:1px solid var(--warn-line)}
+.callout.info{background:var(--primary-soft);color:#1E3A8A;border:1px solid var(--primary-line)}
+.callout svg{flex:none;margin-top:2px}
+
+/* Compare */
+.cmp-cards{display:grid;gap:12px}
+.cmp-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px;display:grid;gap:10px;align-content:start}
+.cmp-card .stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cmp-card .stats div{background:var(--gray-soft);border-radius:8px;padding:7px 9px}
+.cmp-card .stats b{display:block;font-size:15px;font-weight:700}
+.cmp-sec{margin-top:14px}
+.cmp-sec h3{font-size:14px;margin:0;font-weight:600}
+.cmp-tbl td,.cmp-tbl th{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top;text-align:left}
+.cmp-tbl tr:last-child td{border-bottom:0}
+.cmp-tbl th{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:#FBFCFE}
+.cmp-tbl td.lab{color:var(--text);font-weight:500;min-width:200px;width:24%}
+.cmp-tbl td{min-width:220px}
+.mini{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.picker{display:grid;gap:8px;margin-top:12px}
+.picker label{display:flex;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface);cursor:pointer}
+
+/* Modal */
+.m-overlay{position:fixed;inset:0;background:rgba(15,23,42,.4);z-index:60;display:flex;align-items:flex-start;justify-content:center;padding:6vh max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px));overflow-y:auto}
+.modal{background:var(--surface);border-radius:var(--r-lg);width:100%;max-width:560px;box-shadow:var(--shadow-lg);border:1px solid var(--border)}
+.modal.wide{max-width:760px}
+.m-head{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--border)}
+.m-head h3{margin:0;font-size:16px;font-weight:600}
+.m-body{padding:16px 18px;display:grid;gap:12px}
+.m-foot{display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--border);background:#FBFCFE;border-radius:0 0 var(--r-lg) var(--r-lg)}
+.f-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.f{display:flex;flex-direction:column;gap:4px;min-width:0}
+.f.full{grid-column:1/-1}
+.f label{font-size:12px;font-weight:500;color:var(--text)}
+.f label .req{color:var(--risk)}
+.f input,.f select,.f textarea{width:100%;border:1px solid var(--border-strong);border-radius:8px;padding:7px 10px;background:var(--surface)}
+.f textarea{min-height:72px;resize:vertical;line-height:1.45}
+.f .err{color:var(--risk);font-size:12px;display:none}
+.f.invalid input,.f.invalid select,.f.invalid textarea{border-color:var(--risk);background:#FFFBFB}
+.f.invalid .err{display:block}
+.f .hint{font-size:12px;color:var(--muted)}
+.pct-out{font-weight:700;font-size:18px}
+
+/* Toast */
+#toasts{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:80;display:grid;gap:8px}
+.toast{background:var(--text);color:#fff;padding:10px 14px;border-radius:9px;font-size:13px;box-shadow:var(--shadow-lg);display:flex;gap:8px;align-items:center;max-width:360px}
+.toast svg{color:#5EEAD4;flex:none}
+
+@media (max-width:1100px){
+  .drawer{width:86vw}
+  .sum-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .facts{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:760px){
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .drawer,.drawer.compact{width:100vw;border-left:0}
+  .grid2,.f-grid{grid-template-columns:1fr}
+  .ws-actions{margin-left:0}
+  .nav-vac{display:none}
+  .tabs{order:3;width:100%}
+  .tab{flex:1;padding:6px 8px}
+  .search{max-width:none}
+  .d-head{padding:14px 16px 0}
+  .d-body{padding:14px 16px 24px}
+  .mx-wrap{max-height:none}
+  .ecards{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<header class="topnav">
+  <div class="topnav-in gutter">
+    <div class="brand"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>Candidate Evidence Matrix <span class="demo-chip">Demo</span></div>
+    <nav class="tabs" id="tabs" aria-label="Разделы">
+      <button class="tab" data-act="view" data-view="candidates" id="tab-candidates">Кандидаты</button>
+      <button class="tab" data-act="view" data-view="matrix" id="tab-matrix">Матрица</button>
+      <button class="tab" data-act="view" data-view="compare" id="tab-compare">Сравнение</button>
+    </nav>
+    <div class="nav-right">
+      <span class="nav-vac">Senior Product Manager</span>
+      <button class="icon-btn" data-act="menu" id="menu-btn" aria-label="Меню" aria-haspopup="true">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="3" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="13" cy="8" r="1.5"/></svg>
+      </button>
+      <div class="menu" id="menu" hidden>
+        <button data-act="restore">Восстановить демоданные</button>
+      </div>
+    </div>
+  </div>
+</header>
+<main id="main" class="gutter"></main>
+<div id="drawer-root"></div>
+<div id="modal-root"></div>
+<div id="toasts" aria-live="polite"></div>
+
+<script>
+(function(){
+'use strict';
+
+/* ---------- Справочники ---------- */
+const LS_KEY = 'cem_demo_state_v1';
+const VACANCY = {
+  title:'Senior Product Manager', dept:'Product & Technology', format:'Алматы / Hybrid',
+  status:'Активная', min:2000000, max:2800000
+};
+const CRITERIA = [
+  {id:'c1', name:'Продуктовая стратегия', w:20, req:true, group:'pro'},
+  {id:'c2', name:'Discovery и исследования пользователей', w:15, req:true, group:'pro'},
+  {id:'c3', name:'Аналитика и продуктовые метрики', w:15, req:true, group:'pro'},
+  {id:'c4', name:'Управление delivery', w:10, req:false, group:'pro'},
+  {id:'c5', name:'Управление командой и стейкхолдерами', w:15, req:true, group:'beh'},
+  {id:'c6', name:'Принятие решений', w:10, req:false, group:'beh'},
+  {id:'c7', name:'Релевантный отраслевой опыт', w:5, req:false, group:'pro'},
+  {id:'c8', name:'Английский язык', w:5, req:false, group:'pro'},
+  {id:'c9', name:'Мотивация к роли', w:5, req:false, group:'beh'}
+];
+const CRIT = Object.fromEntries(CRITERIA.map(c => [c.id, c]));
+const STAGES = ['Новый','Скрининг','Интервью','Интервью с менеджером','Финальное интервью','Резерв','Отклонен'];
+const FINAL_STAGES = ['Интервью с менеджером','Финальное интервью'];
+const EV_SOURCES = ['Резюме','HR-интервью','Интервью с менеджером','Тест','Рекомендация','Заметка рекрутера'];
+const CAND_SOURCES = ['LinkedIn','hh.kz','Рекомендация сотрудника','Прямой поиск','Сайт компании','Другое'];
+const EV_STATUS = {confirmed:'Подтверждено', check:'Требует проверки', conflict:'Противоречивые данные', none:'Нет данных'};
+const SCORE_TEXT = {1:'Подтвержденное несоответствие',2:'Скорее не соответствует',3:'Соответствует базовому ожиданию',4:'Сильное соответствие',5:'Значительно превосходит ожидание'};
+const INTERVIEW_TYPES = ['HR-интервью','Интервью с менеджером','Кейс-интервью','Финальное интервью'];
+const DISCLAIMER = 'Система структурирует данные и помогает сравнивать кандидатов. Решение принимает человек';
+
+/* ---------- Демоданные ---------- */
+function ev(score, status, source, fact, comment, question){
+  return {score:score, status:status, source:source||'', fact:fact||'', comment:comment||'', question:question||''};
+}
+function noData(question){ return ev(null,'none','','','',question); }
+function emptyEvals(){ const o={}; CRITERIA.forEach(c => o[c.id] = noData('')); return o; }
+
+function demoData(){
+  return {
+    selected:['c-anna','c-max'],
+    candidates:[
+      {
+        id:'c-anna', name:'Анна Соколова', position:'Senior Product Manager', location:'Алматы',
+        email:'anna.sokolova@example.com', source:'LinkedIn', stage:'Финальное интервью',
+        salary:2600000, startDate:'2026-12-01',
+        comment:'Сильный кейс по B2B-онбордингу. Готова к гибридному формату, срок уведомления — 1 месяц.',
+        resume:'Senior Product Manager, Qadam Digital (2022 — н.в.)\n— Отвечаю за B2B-направление: онбординг и активацию SMB-клиентов.\n— Перевела онбординг на self-serve модель, активация +18% за 2 квартала.\n— Веду 2 кросс-функциональные команды (14 человек), релизный цикл сокращен с 4 до 2 недель.\n\nProduct Manager, Qadam Digital (2020 — 2022)\n— Запуск мобильного кабинета, 40 интервью с клиентами до начала разработки.\n\nJunior Product Manager, NovaPay Labs (2018 — 2020)\n— Платежные формы, A/B-тесты конверсии оплаты.\n\nНавыки: SQL, Amplitude, Jira, CJM, JTBD. Английский — B2.',
+        history:[
+          {company:'Qadam Digital', role:'Senior Product Manager', start:'2022-03', end:null, achievement:'Self-serve онбординг для B2B: активация +18% за 2 квартала'},
+          {company:'Qadam Digital', role:'Product Manager', start:'2020-06', end:'2022-03', achievement:'Запуск мобильного кабинета, 120 тыс. MAU за первый год'},
+          {company:'NovaPay Labs', role:'Junior Product Manager', start:'2018-09', end:'2020-05', achievement:'Конверсия платежной формы +6 п.п. по итогам 9 A/B-тестов'}
+        ],
+        evals:{
+          c1:ev(5,'confirmed','Интервью с менеджером','Запустила продуктовую стратегию для B2B-направления и увеличила активацию на 18% за 2 квартала','Объяснила выбор сегмента SMB и отказ от двух кастомных интеграций в пользу self-serve',''),
+          c2:ev(4,'confirmed','Интервью с менеджером','Провела 40 интервью с SMB-клиентами до редизайна онбординга; 3 гипотезы из 7 отклонены до разработки','Описала процесс синтеза и критерии отбора гипотез',''),
+          c3:ev(4,'confirmed','Тест','Кейс по продуктовой аналитике: 26 из 30, верно нашла просадку на шаге верификации','Не учла сезонность в когортном анализе','Как выбирает North Star и контрольные метрики для нового продукта?'),
+          c4:ev(4,'check','Резюме','В резюме: ведет 2 кросс-функциональные команды (14 человек), релизный цикл сокращен с 4 до 2 недель','Факт есть только в резюме, на интервью не обсуждали','Что именно изменили в процессе, чтобы сократить релизный цикл?'),
+          c5:ev(4,'confirmed','Рекомендация','Бывший CPO Qadam Digital: согласовывала roadmap с отделом продаж и риск-менеджментом без эскалаций','Рекомендация получена по телефону, 20 минут',''),
+          c6:noData('Попросить разобрать решение, которое пришлось откатить: какие данные были и что она изменила бы сейчас'),
+          c7:noData('Есть ли опыт в HR-tech или B2B SaaS для HR-функции?'),
+          c8:ev(3,'confirmed','HR-интервью','10 минут HR-интервью прошли на английском: уверенно описала кейс, словарный запас по финансам ограничен','',''),
+          c9:ev(4,'confirmed','HR-интервью','Хочет отвечать за продукт целиком, включая монетизацию; в текущей роли зона ответственности — онбординг','','')
+        },
+        interviews:[
+          {id:'i-a1', type:'HR-интервью', date:'2026-10-06', interviewer:'Алия Нурланова, рекрутер', question:'Почему вы рассматриваете смену работы сейчас?', answer:'Хочу отвечать за продукт целиком, включая монетизацию. В текущей роли зона ответственности — онбординг.', observation:'Мотивация связана с содержанием роли, а не только с компенсацией.', criterion:'c9', score:4, nextQuestion:''},
+          {id:'i-a2', type:'Интервью с менеджером', date:'2026-10-14', interviewer:'Тимур Ахметов, CPO', question:'Расскажите о стратегическом решении, которое вы приняли за последний год.', answer:'Перевела B2B-направление на self-serve онбординг, отказавшись от двух кастомных интеграций. Активация выросла на 18% за 2 квартала.', observation:'Привела цифры до и после, назвала альтернативы, от которых отказалась.', criterion:'c1', score:5, nextQuestion:'Как приоритизирует, когда цели продаж и продукта конфликтуют?'}
+        ],
+        tests:[
+          {id:'t-a1', name:'Кейс: продуктовая аналитика', date:'2026-10-10', score:26, max:30, criterion:'c3', comment:'Корректно нашла просадку на шаге верификации; не учла сезонность.'}
+        ]
+      },
+      {
+        id:'c-max', name:'Максим Орлов', position:'Product Lead', location:'Алматы',
+        email:'m.orlov@example.com', source:'Прямой поиск', stage:'Интервью с менеджером',
+        salary:3100000, startDate:'2027-01-15',
+        comment:'Ожидания выше бюджета на 300 000 ₸. Готов обсуждать структуру компенсации.',
+        resume:'Product Lead, Orbit Commerce (2023 — н.в.)\n— Руковожу направлением маркетплейса: 3 PM, 2 дизайнера.\n— Стратегия на 2024 год с фокусом на продавцах среднего сегмента, GMV +27% г/г.\n— Внедрил квартальное планирование для 5 команд, доля релизов в срок выросла с 61% до 84%.\n\nSenior Product Manager, Meridian Tech (2020 — 2022)\n— Продукт для логистики, B2B.\n\nProduct Manager, NovaPay Labs (2017 — 2020)\n— Мобильные платежи.\n\nНавыки: SQL, Python (базовый), Looker, OKR.',
+        history:[
+          {company:'Orbit Commerce', role:'Product Lead', start:'2023-01', end:null, achievement:'Стратегия маркетплейса: GMV +27% год к году'},
+          {company:'Meridian Tech', role:'Senior Product Manager', start:'2020-02', end:'2022-12', achievement:'Запуск B2B-кабинета для логистических партнеров'},
+          {company:'NovaPay Labs', role:'Product Manager', start:'2017-10', end:'2020-01', achievement:'Мобильные переводы: 300 тыс. активных пользователей'}
+        ],
+        evals:{
+          c1:ev(4,'confirmed','Интервью с менеджером','Сформировал стратегию маркетплейса Orbit Commerce на 2024 год: фокус на продавцах среднего сегмента, GMV +27% г/г','Хорошо описал выбор сегмента; меньше конкретики по экономике продавцов',''),
+          c2:noData('Как часто сам проводит интервью с пользователями? Попросить пример исследования, которое изменило roadmap'),
+          c3:ev(4,'confirmed','Тест','SQL и когортный анализ: 22 из 25, построил когортный анализ удержания без подсказок','',''),
+          c4:ev(4,'check','Резюме','В резюме: квартальное планирование для 5 команд, доля релизов в срок выросла с 61% до 84%','Цифры только в резюме','Как измеряли долю релизов в срок и кто отвечал за метрику?'),
+          c5:ev(4,'conflict','HR-интервью','В резюме — руководство 3 PM; на HR-интервью уточнил, что функционально подчинялись только 2 PM','Расхождение в масштабе управления, может объясняться матричной структурой','Уточнить у рекомендателя структуру команды и формат подчинения'),
+          c6:noData('Пример решения в условиях неполных данных и его последствия'),
+          c7:noData('Был ли опыт продуктов для HR или B2B SaaS с длинным циклом продаж?'),
+          c8:ev(3,'confirmed','HR-интервью','Работал с командой разработки в Сербии на английском; на HR-интервью отвечал уверенно, но медленно','',''),
+          c9:noData('Почему рассматривает переход с позиции Product Lead на Senior PM?')
+        },
+        interviews:[
+          {id:'i-m1', type:'HR-интервью', date:'2026-10-08', interviewer:'Алия Нурланова, рекрутер', question:'Опишите структуру вашей текущей команды.', answer:'Руковожу направлением, в команде 3 PM и 2 дизайнера. Функционально подчиняются 2 PM, третий — в соседнем направлении.', observation:'Формулировка в резюме шире, чем описание на интервью.', criterion:'c5', score:3, nextQuestion:''},
+          {id:'i-m2', type:'Интервью с менеджером', date:'2026-10-20', interviewer:'Тимур Ахметов, CPO', question:'Как вы выбирали фокус стратегии маркетплейса?', answer:'Сравнил вклад сегментов продавцов в GMV и отток, выбрал средний сегмент: 40% GMV при оттоке выше среднего.', observation:'Опирается на данные, приводит цифры по сегментам.', criterion:'c1', score:4, nextQuestion:''}
+        ],
+        tests:[
+          {id:'t-m1', name:'SQL и когортный анализ', date:'2026-10-12', score:22, max:25, criterion:'c3', comment:'Решил все задачи, кроме оконной функции в последнем задании.'}
+        ]
+      },
+      {
+        id:'c-diana', name:'Диана Ким', position:'Product Manager', location:'Алматы',
+        email:'diana.kim@example.com', source:'hh.kz', stage:'Скрининг',
+        salary:2300000, startDate:'2026-11-20',
+        comment:'Резюме сильное, но большинство фактов пока не подтверждены интервью или тестом.',
+        resume:'Product Manager, Meridian Tech (2023 — н.в.)\n— Сформировала продуктовую стратегию направления платежей.\n— 60+ интервью с пользователями в квартал, запуск 2 продуктов по итогам discovery.\n\nAssociate Product Manager, Orbit Commerce (2021 — 2023)\n— Каталог и поиск.\n\nБизнес-аналитик, Qadam Digital (2020 — 2021)\n\nНавыки: Figma, Miro, SQL (базовый), customer development.',
+        history:[
+          {company:'Meridian Tech', role:'Product Manager', start:'2023-05', end:null, achievement:'Запуск 2 продуктов в направлении платежей (метрики в резюме не указаны)'},
+          {company:'Orbit Commerce', role:'Associate Product Manager', start:'2021-09', end:'2023-04', achievement:'Улучшение поиска по каталогу'},
+          {company:'Qadam Digital', role:'Бизнес-аналитик', start:'2020-01', end:'2021-08', achievement:'Описание требований для CRM-модуля'}
+        ],
+        evals:{
+          c1:ev(4,'check','Резюме','В резюме: «сформировала продуктовую стратегию направления платежей»; метрики результата не приведены','Нужны цели, альтернативы и результат в цифрах','Попросить показать стратегию: цели, от чего отказались, результаты в цифрах'),
+          c2:ev(5,'check','Резюме','В резюме: 60+ интервью с пользователями в квартал и запуск 2 продуктов по итогам discovery','Объем впечатляет, но не подтвержден примерами','Какие решения приняты по итогам интервью? Кто еще участвовал в исследованиях?'),
+          c3:noData('Пройти тест по продуктовой аналитике (кейс по воронке)'),
+          c4:noData('Как устроен процесс поставки в команде, за что отвечает лично?'),
+          c5:noData('Пример работы с конфликтующими стейкхолдерами без формальной власти'),
+          c6:noData('Пример решения, принятого при неполных данных'),
+          c7:noData('Есть ли опыт B2B-продуктов?'),
+          c8:noData('Провести часть интервью на английском'),
+          c9:ev(3,'confirmed','HR-интервью','Интересна роль с большей зоной ответственности; параллельно рассматривает 2 других предложения','','Уточнить сроки принятия решения по другим предложениям')
+        },
+        interviews:[
+          {id:'i-d1', type:'HR-интервью', date:'2026-10-22', interviewer:'Алия Нурланова, рекрутер', question:'Что для вас важно в следующей роли?', answer:'Больше зоны ответственности и возможность влиять на стратегию продукта.', observation:'Параллельно на финальных этапах в двух компаниях.', criterion:'c9', score:3, nextQuestion:'Уточнить сроки принятия решения по другим предложениям'}
+        ],
+        tests:[]
+      }
+    ]
+  };
+}
+
+/* ---------- Хранение ---------- */
+function load(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(!raw) return null;
+    const d = JSON.parse(raw);
+    if(!d || !Array.isArray(d.candidates)) return null;
+    if(!Array.isArray(d.selected)) d.selected = [];
+    return d;
+  }catch(e){ return null; }
+}
+function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){} }
+
+let state = load();
+if(!state){ state = demoData(); save(); }
+
+const ui = {view:'candidates', search:'', stage:'all', openId:null, tab:'overview', cell:null,
+            mSearch:'', reqOnly:false, mode:'scores', menu:false};
+
+/* ---------- Утилиты ---------- */
+const $ = s => document.querySelector(s);
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
+const nf = new Intl.NumberFormat('ru-RU');
+function tenge(n){ return (n || n === 0) && isFinite(n) && n > 0 ? nf.format(n) + ' ₸' : 'Не указано'; }
+function pct(n){ return n == null || !isFinite(n) ? '—' : Math.round(n) + '%'; }
+function fmtDate(s){ if(!s) return '—'; const p = String(s).split('-'); return p.length === 3 ? p[2]+'.'+p[1]+'.'+p[0] : s; }
+function todayISO(){ const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function initials(name){ return String(name||'').trim().split(/\s+/).slice(0,2).map(w => w[0] || '').join('').toUpperCase() || '—'; }
+function plural(n, f){ const a = Math.abs(n)%100, b = a%10; if(a>10 && a<20) return f[2]; if(b>1 && b<5) return f[1]; if(b===1) return f[0]; return f[2]; }
+function dur(m){
+  if(m == null || !isFinite(m)) return '—';
+  m = Math.max(0, Math.round(m));
+  const y = Math.floor(m/12), r = m%12, out = [];
+  if(y) out.push(y + ' ' + plural(y, ['год','года','лет']));
+  if(r || !y) out.push(r + ' мес.');
+  return out.join(' ');
+}
+function uid(p){ return p + '-' + Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function getCand(id){ return state.candidates.find(c => c.id === id); }
+function getEval(c, cid){ return (c.evals && c.evals[cid]) || noData(''); }
+
+const ICON = {
+  search:'<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="5"/><path d="M11 11l3.5 3.5"/></svg>',
+  warn:'<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 1.8L15 14H1L8 1.8z"/><path d="M8 6.5v3.2M8 11.6v.4"/></svg>',
+  info:'<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><path d="M8 7v4.2M8 4.8v.4"/></svg>',
+  close:'<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 3l10 10M13 3L3 13"/></svg>',
+  check:'<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8.5l3 3 7-7"/></svg>',
+  doc:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 3H6a1 1 0 00-1 1v16a1 1 0 001 1h12a1 1 0 001-1V8l-5-5z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>',
+  scale:'<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v12M3 14h10M2 5h12M4 5l-2 5h4L4 5zM12 5l-2 5h4l-2-5z"/></svg>'
+};
+
+/* ---------- Расчеты ---------- */
+function metrics(c){
+  let wScored = 0, pts = 0, cov = 0;
+  CRITERIA.forEach(cr => {
+    const e = getEval(c, cr.id);
+    if(e.score >= 1 && e.score <= 5){
+      wScored += cr.w;
+      pts += cr.w * e.score / 5;
+      if(e.source) cov += cr.w;
+    }
+  });
+  const fit = wScored > 0 ? Math.round(pts / wScored * 100) : null;
+  const coverage = Math.round(cov / 100 * 100);
+  const req = CRITERIA.filter(r => r.req);
+  let status;
+  if(req.some(r => { const s = getEval(c, r.id).score; return s && s <= 2; })) status = 'risk';
+  else if(coverage < 70 || req.some(r => !getEval(c, r.id).score)) status = 'check';
+  else if(fit != null && fit >= 80) status = 'strong';
+  else status = 'ok';
+  return {fit, coverage, status};
+}
+const STATUS_META = {
+  risk:{label:'Есть критический риск', cls:'b-risk'},
+  check:{label:'Нужно проверить', cls:'b-warn'},
+  strong:{label:'Сильное соответствие', cls:'b-ok'},
+  ok:{label:'Можно рассматривать', cls:'b-blue'}
+};
+function statusBadge(m){ const s = STATUS_META[m.status]; return '<span class="badge '+s.cls+'"><span class="dot"></span>'+s.label+'</span>'; }
+
+function budgetFit(sal){
+  if(!sal || !isFinite(sal) || sal <= 0) return {label:'Не указано', cls:'b-gray'};
+  if(sal > VACANCY.max) return {label:'Выше бюджета', cls:'b-warn'};
+  if(sal < VACANCY.min) return {label:'Ниже нижней границы', cls:'b-blue'};
+  return {label:'В бюджете', cls:'b-ok'};
+}
+function budgetBadge(sal){ const b = budgetFit(sal); return '<span class="badge '+b.cls+'">'+b.label+'</span>'; }
+
+function needsWarning(m){ return m.fit != null && m.fit >= 75 && m.coverage < 60; }
+
+function tone(e){
+  if(!e.score) return 'gray';
+  if(e.score <= 2) return 'risk';
+  if(e.status === 'check' || e.status === 'conflict') return 'warn';
+  if(e.score === 3) return 'blue';
+  return 'ok';
+}
+function evStatusBadge(e){
+  if(e.status === 'none' && !e.score) return '';
+  const cls = {confirmed:'b-ok', check:'b-warn', conflict:'b-risk', none:'b-gray'}[e.status] || 'b-gray';
+  return '<span class="badge '+cls+'">'+(EV_STATUS[e.status] || 'Нет данных')+'</span>';
+}
+function scorePill(e){
+  const t = tone(e);
+  return '<span class="score-pill t-'+t+' num">'+(e.score ? e.score + ' / 5' : 'Нет данных')+'</span>';
+}
+function bar(v, kind){
+  const val = v == null ? 0 : v;
+  let color = 'var(--primary)';
+  if(kind === 'cov') color = val >= 70 ? 'var(--ok)' : val > 0 ? 'var(--warn)' : 'var(--border-strong)';
+  return '<div class="bar"><div class="track"><div class="fill" style="width:'+Math.max(0,Math.min(100,val))+'%;background:'+color+'"></div></div><b class="num">'+pct(v)+'</b></div>';
+}
+
+function careerFacts(c){
+  const h = (c.history || []).filter(r => r.start);
+  if(!h.length) return null;
+  const now = new Date();
+  const toM = s => { const p = String(s).split('-').map(Number); return p[0]*12 + (p[1]-1); };
+  const nowM = now.getFullYear()*12 + now.getMonth();
+  const rows = h.map(r => ({...r, months: Math.max(0, (r.end ? toM(r.end) : nowM) - toM(r.start))}))
+               .sort((a,b) => toM(a.start) - toM(b.start));
+  const total = rows.reduce((s,r) => s + r.months, 0);
+  let transitions = 0, promotions = 0;
+  const companies = [];
+  rows.forEach((r,i) => {
+    if(i > 0){ if(r.company === rows[i-1].company) promotions++; else transitions++; }
+    const last = companies[companies.length-1];
+    if(last && last.company === r.company) last.months += r.months; else companies.push({company:r.company, months:r.months});
+  });
+  const avg = companies.length ? total / companies.length : 0;
+  return {total, avg, transitions, promotions, rows};
+}
+function rowMonths(r){
+  const now = new Date();
+  const toM = s => { const p = String(s).split('-').map(Number); return p[0]*12 + (p[1]-1); };
+  return Math.max(0, (r.end ? toM(r.end) : now.getFullYear()*12 + now.getMonth()) - toM(r.start));
+}
+function fmtYM(s){ if(!s) return 'н.в.'; const p = s.split('-'); return p[1]+'.'+p[0]; }
+
+/* Структурированная сводка — только из введенных данных */
+function analysis(c){
+  const strengths = CRITERIA.map(cr => ({cr, e:getEval(c, cr.id)}))
+    .filter(x => x.e.status === 'confirmed' && x.e.score >= 4)
+    .sort((a,b) => b.e.score - a.e.score || b.cr.w - a.cr.w).slice(0,3);
+  const reqRisks = CRITERIA.filter(cr => cr.req).map(cr => {
+    const e = getEval(c, cr.id);
+    let reason = null;
+    if(!e.score) reason = 'Нет данных';
+    else if(e.score <= 2) reason = 'Оценка ' + e.score + ' — ' + SCORE_TEXT[e.score].toLowerCase();
+    else if(e.status === 'conflict') reason = 'Противоречивые данные';
+    else if(e.status === 'check') reason = 'Требует проверки';
+    return reason ? {cr, e, reason} : null;
+  }).filter(Boolean);
+  const missing = CRITERIA.filter(cr => !getEval(c, cr.id).score);
+  const risks = CRITERIA.map(cr => ({cr, e:getEval(c, cr.id)}))
+    .filter(x => (x.e.score && x.e.score <= 2) || x.e.status === 'conflict');
+  const qs = [];
+  CRITERIA.forEach(cr => { const q = getEval(c, cr.id).question; if(q && q.trim()) qs.push({text:q.trim(), crit:cr.name}); });
+  (c.interviews || []).forEach(i => { if(i.nextQuestion && i.nextQuestion.trim()) qs.push({text:i.nextQuestion.trim(), crit:CRIT[i.criterion] ? CRIT[i.criterion].name : i.type}); });
+  const seen = new Set();
+  const questions = qs.filter(q => { const k = q.text.toLowerCase(); if(seen.has(k)) return false; seen.add(k); return true; });
+  return {strengths, reqRisks, missing, risks, questions};
+}
+
+/* ---------- Toast ---------- */
+function toast(msg){
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.innerHTML = ICON.check + '<span>' + esc(msg) + '</span>';
+  $('#toasts').appendChild(el);
+  setTimeout(() => el.remove(), 2800);
+}
+
+/* ---------- Рендер: навигация и шапка ---------- */
+function renderNav(){
+  ['candidates','matrix','compare'].forEach(v => $('#tab-'+v).classList.toggle('active', ui.view === v));
+  $('#menu').hidden = !ui.menu;
+}
+function workspace(){
+  return '<section class="ws" aria-label="Вакансия">'+
+    '<div class="ws-title"><h1>'+esc(VACANCY.title)+'</h1><span class="badge b-ok"><span class="dot"></span>'+VACANCY.status+'</span>'+
+    '<button class="btn sm" data-act="criteria-info">'+ICON.scale+'Настроить критерии</button></div>'+
+    '<div class="ws-meta">'+
+      '<div><span class="h-label">Подразделение</span><b>'+esc(VACANCY.dept)+'</b></div>'+
+      '<div><span class="h-label">Формат</span><b>'+esc(VACANCY.format)+'</b></div>'+
+      '<div><span class="h-label">Бюджет</span><b class="num">'+nf.format(VACANCY.min)+' – '+nf.format(VACANCY.max)+' ₸</b></div>'+
+      '<div><span class="h-label">Кандидатов</span><b class="num">'+state.candidates.length+'</b></div>'+
+    '</div>'+
+    '<div class="ws-actions"><button class="btn primary" data-act="add-cand">+ Добавить кандидата</button></div>'+
+  '</section>';
+}
+function disclaimer(){
+  return '<div class="disclaimer">'+ICON.info+'<span>'+DISCLAIMER+'</span></div>';
+}
+
+function renderMain(){
+  const main = $('#main');
+  let html = workspace();
+  if(ui.view === 'candidates') html += viewCandidates();
+  else if(ui.view === 'matrix') html += viewMatrix();
+  else html += viewCompare();
+  main.innerHTML = html;
+  if(ui.view === 'candidates') renderCandTable();
+  if(ui.view === 'matrix') renderMatrixTable();
+}
+
+/* ---------- Экран «Кандидаты» ---------- */
+function viewCandidates(){
+  const ms = state.candidates.map(metrics);
+  const fits = ms.filter(m => m.fit != null).map(m => m.fit);
+  const avgFit = fits.length ? fits.reduce((a,b)=>a+b,0)/fits.length : null;
+  const avgCov = ms.length ? ms.reduce((a,m)=>a+m.coverage,0)/ms.length : null;
+  const finalists = state.candidates.filter(c => FINAL_STAGES.includes(c.stage)).length;
+  const selN = state.selected.length;
+  return '<div class="kpis">'+
+      '<div class="kpi"><div class="h-label">Кандидатов</div><div class="v num">'+state.candidates.length+'</div><div class="s">в вакансии</div></div>'+
+      '<div class="kpi"><div class="h-label">Финалистов</div><div class="v num">'+finalists+'</div><div class="s">интервью с менеджером и финал</div></div>'+
+      '<div class="kpi"><div class="h-label">Средний Fit Score</div><div class="v num">'+pct(avgFit)+'</div><div class="s">по оцененным критериям</div></div>'+
+      '<div class="kpi"><div class="h-label">Среднее покрытие данных</div><div class="v num">'+pct(avgCov)+'</div><div class="s">доля веса с источником</div></div>'+
+    '</div>'+
+    '<div class="toolbar">'+
+      '<div class="search">'+ICON.search+'<input id="cand-search" type="search" placeholder="Поиск по имени или должности" value="'+esc(ui.search)+'" aria-label="Поиск кандидатов"></div>'+
+      '<select class="select" id="stage-filter" aria-label="Фильтр по этапу"><option value="all">Все этапы</option>'+
+        STAGES.map(s => '<option'+(ui.stage===s?' selected':'')+'>'+s+'</option>').join('')+'</select>'+
+      '<div class="spacer"></div>'+
+      '<button class="btn" data-act="go-compare" '+(selN>=2&&selN<=3?'':'disabled')+' title="Выберите 2 или 3 кандидатов">Сравнить выбранных'+(selN?' ('+selN+')':'')+'</button>'+
+      '<button class="btn primary" data-act="add-cand">+ Добавить кандидата</button>'+
+    '</div>'+
+    '<div class="card"><div class="tbl-wrap" id="cand-table"></div></div>';
+}
+function renderCandTable(){
+  const box = $('#cand-table'); if(!box) return;
+  const q = ui.search.trim().toLowerCase();
+  const list = state.candidates.filter(c =>
+    (!q || (c.name+' '+c.position).toLowerCase().includes(q)) &&
+    (ui.stage === 'all' || c.stage === ui.stage));
+  if(!list.length){
+    box.innerHTML = '<div class="empty"><b>Ничего не найдено</b>Измените запрос или фильтр по этапу.'+
+      '<div style="margin-top:12px"><button class="btn sm" data-act="reset-filters">Сбросить фильтры</button></div></div>';
+    return;
+  }
+  box.innerHTML = '<table class="tbl"><thead><tr>'+
+    '<th style="width:36px"><span class="sr" aria-label="Выбор"></span></th><th>Кандидат</th><th>Текущая должность</th><th>Этап</th><th>Fit Score</th><th>Evidence Coverage</th><th>Зарплатные ожидания</th><th>Бюджет</th><th></th>'+
+    '</tr></thead><tbody>'+
+    list.map(c => {
+      const m = metrics(c), sel = state.selected.includes(c.id);
+      return '<tr class="row'+(sel?' sel':'')+'" data-act="open" data-id="'+c.id+'" tabindex="0">'+
+        '<td><input type="checkbox" class="chk" data-act="toggle-sel" data-id="'+c.id+'" '+(sel?'checked':'')+' aria-label="Выбрать для сравнения"></td>'+
+        '<td><div class="cname-wrap"><span class="avatar">'+esc(initials(c.name))+'</span><div><div class="cname">'+esc(c.name)+'</div>'+
+          '<div style="margin-top:3px">'+statusBadge(m)+'</div>'+
+          (needsWarning(m) ? '<div class="warn-line">'+ICON.warn+'<span>Высокий предварительный балл, но недостаточно подтвержденных данных</span></div>' : '')+
+        '</div></div></td>'+
+        '<td>'+esc(c.position)+'</td>'+
+        '<td><span class="badge b-gray">'+esc(c.stage)+'</span></td>'+
+        '<td>'+bar(m.fit,'fit')+'</td>'+
+        '<td>'+bar(m.coverage,'cov')+'</td>'+
+        '<td class="num" style="white-space:nowrap">'+tenge(c.salary)+'</td>'+
+        '<td>'+budgetBadge(c.salary)+'</td>'+
+        '<td><button class="btn sm" data-act="open" data-id="'+c.id+'">Открыть</button></td>'+
+      '</tr>';
+    }).join('')+'</tbody></table>';
+}
+
+/* ---------- Экран «Матрица» ---------- */
+function viewMatrix(){
+  const selN = state.selected.length;
+  return '<div class="toolbar">'+
+      '<div class="search">'+ICON.search+'<input id="m-search" type="search" placeholder="Поиск кандидата" value="'+esc(ui.mSearch)+'" aria-label="Поиск кандидата в матрице"></div>'+
+      '<div class="seg" role="group" aria-label="Критерии">'+
+        '<button data-act="req" data-v="0" class="'+(!ui.reqOnly?'on':'')+'">Все критерии</button>'+
+        '<button data-act="req" data-v="1" class="'+(ui.reqOnly?'on':'')+'">Только обязательные</button></div>'+
+      '<div class="seg" role="group" aria-label="Режим">'+
+        [['scores','Баллы'],['evidence','Доказательства'],['risks','Риски']].map(x => '<button data-act="mode" data-v="'+x[0]+'" class="'+(ui.mode===x[0]?'on':'')+'">'+x[1]+'</button>').join('')+'</div>'+
+      '<div class="spacer"></div>'+
+      '<button class="btn" data-act="go-compare" '+(selN>=2&&selN<=3?'':'disabled')+'>Сравнить выбранных'+(selN?' ('+selN+')':'')+'</button>'+
+    '</div>'+
+    '<div class="legend">'+
+      '<span><i style="background:var(--ok-soft);border:1px solid var(--ok)"></i>4–5 сильное</span>'+
+      '<span><i style="background:var(--primary-soft);border:1px solid var(--primary)"></i>3 базовое</span>'+
+      '<span><i style="background:var(--risk-soft);border:1px solid var(--risk)"></i>1–2 несоответствие</span>'+
+      '<span><i style="background:var(--warn-soft);border:1px solid var(--warn)"></i>требует проверки / противоречие</span>'+
+      '<span><i style="background:var(--gray-soft);border:1px solid var(--border-strong)"></i>нет данных</span>'+
+      '<span><i style="border-radius:50%;background:var(--muted);width:8px;height:8px"></i>есть факт или цитата</span>'+
+    '</div>'+
+    '<div class="card mx-wrap" id="matrix-table"></div>'+
+    disclaimer();
+}
+function matrixCell(c, cr){
+  const e = getEval(c, cr.id), t = tone(e), hasFact = !!(e.fact && e.fact.trim());
+  let inner, dim = false;
+  if(ui.mode === 'scores'){
+    inner = e.score ? '<span class="sc num">'+e.score+'</span><span class="lbl">'+(e.status==='confirmed'?'Подтверждено':EV_STATUS[e.status])+'</span>' : '<span class="lbl">Нет данных</span>';
+  } else if(ui.mode === 'evidence'){
+    inner = '<span class="lbl"><b>'+(EV_STATUS[e.status]||'Нет данных')+'</b><br>'+(e.source ? esc(e.source) : 'Источник не указан')+'</span>';
+  } else {
+    let r = null;
+    if(e.score && e.score <= 2) r = 'Несоответствие: '+e.score;
+    else if(e.status === 'conflict') r = 'Противоречие';
+    else if(e.status === 'check') r = 'Нужно проверить';
+    else if(!e.score) r = cr.req ? 'Нет данных · обязательный' : 'Нет данных';
+    inner = '<span class="lbl">'+(r || 'Риск не выявлен')+'</span>';
+    dim = !r;
+  }
+  return '<button class="mcell t-'+t+(dim?' dim':'')+'" data-act="cell" data-id="'+c.id+'" data-crit="'+cr.id+'" aria-label="'+esc(c.name+', '+cr.name)+'">'+inner+
+    '<span class="ev'+(hasFact?' has':'')+'" title="'+(hasFact?'Есть подтверждающий факт':'Нет факта')+'"></span></button>';
+}
+function renderMatrixTable(){
+  const box = $('#matrix-table'); if(!box) return;
+  const q = ui.mSearch.trim().toLowerCase();
+  const cands = state.candidates.filter(c => !q || (c.name+' '+c.position).toLowerCase().includes(q));
+  if(!cands.length){
+    box.innerHTML = '<div class="empty"><b>Кандидаты не найдены</b>Измените поисковый запрос.<div style="margin-top:12px"><button class="btn sm" data-act="reset-msearch">Очистить поиск</button></div></div>';
+    return;
+  }
+  const crits = CRITERIA.filter(cr => !ui.reqOnly || cr.req);
+  const ms = Object.fromEntries(cands.map(c => [c.id, metrics(c)]));
+  let h = '<table class="mx"><thead><tr><th class="first"><span class="h-label">Критерий · вес</span></th>'+
+    cands.map(c => {
+      const sel = state.selected.includes(c.id);
+      return '<th><div class="mx-head"><button class="link" data-act="open" data-id="'+c.id+'">'+esc(c.name)+'</button>'+
+        '<span class="small muted" style="font-weight:400;text-transform:none;letter-spacing:0">'+esc(c.position)+' · '+esc(c.stage)+'</span>'+
+        '<label><input type="checkbox" class="chk" data-act="toggle-sel" data-id="'+c.id+'" '+(sel?'checked':'')+'>К сравнению</label></div></th>';
+    }).join('')+'</tr></thead><tbody>';
+  crits.forEach(cr => {
+    h += '<tr><th class="first" scope="row"><div class="crit-name">'+esc(cr.name)+'<span class="meta"><span class="num">'+cr.w+'%</span>'+(cr.req?'<span class="badge b-req">Обязательный</span>':'')+'</span></div></th>'+
+      cands.map(c => '<td>'+matrixCell(c, cr)+'</td>').join('')+'</tr>';
+  });
+  const sumRow = (label, fn, first) => '<tr class="sum'+(first?' sum-first':'')+'"><th class="first" scope="row"><div class="crit-name">'+label+'</div></th>'+cands.map(c => '<td>'+fn(c, ms[c.id])+'</td>').join('')+'</tr>';
+  h += sumRow('Fit Score', (c,m) => bar(m.fit,'fit'), true);
+  h += sumRow('Evidence Coverage', (c,m) => bar(m.coverage,'cov'));
+  h += sumRow('Зарплатные ожидания', c => '<span class="num">'+tenge(c.salary)+'</span>');
+  h += sumRow('Соответствие бюджету', c => budgetBadge(c.salary));
+  h += sumRow('Предварительный статус', (c,m) => statusBadge(m) + (needsWarning(m) ? '<div class="warn-line">'+ICON.warn+'<span>Вывод предварительный</span></div>' : ''));
+  h += '</tbody></table>';
+  box.innerHTML = h;
+}
+
+/* ---------- Экран «Сравнение» ---------- */
+function viewCompare(){
+  const cands = state.selected.map(getCand).filter(Boolean);
+  if(cands.length < 2){
+    return '<div class="card" style="margin-top:16px;padding:18px">'+
+      '<div class="panel-h" style="margin-bottom:4px"><h3>Выберите двух или трех кандидатов для сравнения</h3><div class="act"><button class="btn" data-act="view" data-view="matrix">Вернуться к матрице</button></div></div>'+
+      '<div class="muted">Выбрано: '+cands.length+'. Отметьте кандидатов ниже, в таблице кандидатов или в шапке матрицы.</div>'+
+      '<div class="picker">'+state.candidates.map(c => {
+        const m = metrics(c), sel = state.selected.includes(c.id);
+        return '<label><input type="checkbox" class="chk" data-act="toggle-sel" data-id="'+c.id+'" '+(sel?'checked':'')+'>'+
+          '<span class="avatar">'+esc(initials(c.name))+'</span><span style="flex:1"><b>'+esc(c.name)+'</b><br><span class="small muted">'+esc(c.position)+' · Fit '+pct(m.fit)+' · Coverage '+pct(m.coverage)+'</span></span>'+statusBadge(m)+'</label>';
+      }).join('')+'</div>'+disclaimer()+'</div>';
+  }
+  const n = cands.length;
+  const cols = 'grid-template-columns:repeat('+n+',minmax(240px,1fr))';
+  const data = cands.map(c => ({c, m:metrics(c), a:analysis(c)}));
+  let h = '<div class="toolbar"><div><b style="font-size:15px">Сравнение кандидатов</b> <span class="muted">· '+n+' из 3</span></div><div class="spacer"></div>'+
+    '<button class="btn" data-act="view" data-view="matrix">Вернуться к матрице</button></div>';
+  h += '<div class="callout info">'+ICON.info+'<span>Система не выбирает победителя. Используйте сравнение, чтобы увидеть подтвержденные факты, пробелы в данных и вопросы для следующего этапа.</span></div>';
+  h += '<div class="tbl-wrap" style="margin-top:12px"><div class="cmp-cards" style="'+cols+'">'+data.map(d =>
+    '<div class="cmp-card">'+
+      '<div class="d-top"><span class="avatar">'+esc(initials(d.c.name))+'</span><div style="flex:1;min-width:0"><b style="font-size:15px">'+esc(d.c.name)+'</b><div class="small muted">'+esc(d.c.position)+'</div></div>'+
+      '<button class="icon-btn" data-act="toggle-sel" data-id="'+d.c.id+'" aria-label="Убрать из сравнения" title="Убрать из сравнения">'+ICON.close+'</button></div>'+
+      '<div class="mini"><span class="badge b-gray">'+esc(d.c.stage)+'</span>'+statusBadge(d.m)+'</div>'+
+      '<div class="stats"><div><span class="h-label">Fit Score</span><b class="num">'+pct(d.m.fit)+'</b></div><div><span class="h-label">Coverage</span><b class="num">'+pct(d.m.coverage)+'</b></div>'+
+      '<div><span class="h-label">Ожидания</span><b class="num" style="font-size:13px">'+tenge(d.c.salary)+'</b></div><div><span class="h-label">Бюджет</span><div style="margin-top:3px">'+budgetBadge(d.c.salary)+'</div></div></div>'+
+      (needsWarning(d.m) ? '<div class="callout warn">'+ICON.warn+'<span>Вывод предварительный: требуется дополнительная проверка</span></div>' : '')+
+      '<button class="btn sm" data-act="open" data-id="'+d.c.id+'" style="justify-self:start">Открыть карточку</button>'+
+    '</div>').join('')+'</div></div>';
+
+  const listSection = (title, fn) => '<div class="card cmp-sec"><div class="panel-h" style="padding:14px 12px 0;margin-bottom:8px"><h3>'+title+'</h3></div><div class="tbl-wrap"><table class="cmp-tbl"><thead><tr>'+data.map(d => '<th>'+esc(d.c.name)+'</th>').join('')+'</tr></thead><tbody><tr>'+data.map(d => '<td style="width:'+(100/n)+'%">'+fn(d)+'</td>').join('')+'</tr></tbody></table></div></div>';
+  const critSection = (title, group) => '<div class="card cmp-sec"><div class="panel-h" style="padding:14px 12px 0;margin-bottom:8px"><h3>'+title+'</h3></div><div class="tbl-wrap"><table class="cmp-tbl"><thead><tr><th>Критерий</th>'+data.map(d => '<th>'+esc(d.c.name)+'</th>').join('')+'</tr></thead><tbody>'+
+    CRITERIA.filter(cr => cr.group === group).map(cr => '<tr><td class="lab">'+esc(cr.name)+'<div class="small muted num">'+cr.w+'%'+(cr.req?' · обязательный':'')+'</div></td>'+
+      data.map(d => { const e = getEval(d.c, cr.id); return '<td><div class="mini">'+scorePill(e)+evStatusBadge(e)+'</div>'+(e.fact?'<div class="small" style="margin-top:6px">'+esc(e.fact)+'</div>':'')+'</td>'; }).join('')+'</tr>').join('')+
+    '</tbody></table></div></div>';
+  const ul = items => items.length ? '<ul class="sum-list">'+items.join('')+'</ul>' : '';
+
+  h += listSection('Ключевые сильные стороны', d => d.a.strengths.length ? ul(d.a.strengths.map(x => '<li>'+scorePill(x.e)+'<span><b>'+esc(x.cr.name)+'</b><br><span class="small">'+esc(x.e.fact)+'</span></span></li>')) : '<span class="muted small">Нет подтвержденных оценок 4–5</span>');
+  h += critSection('Профессиональные критерии', 'pro');
+  h += critSection('Поведенческие критерии', 'beh');
+  h += listSection('Подтвержденные риски', d => d.a.risks.length ? ul(d.a.risks.map(x => '<li>'+evStatusBadge(x.e)+'<span><b>'+esc(x.cr.name)+'</b><br><span class="small">'+esc(x.e.fact || x.e.comment)+'</span></span></li>')) : '<span class="muted small">Подтвержденных рисков не зафиксировано</span>');
+  h += listSection('Данные, которых не хватает', d => d.a.missing.length ? ul(d.a.missing.map(cr => '<li><span class="badge b-gray">'+cr.w+'%</span><span>'+esc(cr.name)+(cr.req?' <span class="badge b-req">Обязательный</span>':'')+'</span></li>')) : '<span class="muted small">Все критерии оценены</span>');
+  h += listSection('Вопросы для следующего интервью', d => d.a.questions.length ? ul(d.a.questions.map(q => '<li><span class="small"><b>'+esc(q.crit)+':</b> '+esc(q.text)+'</span></li>')) : '<span class="muted small">Вопросы не заданы</span>');
+  h += disclaimer();
+  return h;
+}
+
+/* ---------- Карточка кандидата (drawer) ---------- */
+function renderDrawer(){
+  const root = $('#drawer-root');
+  const prev = root.querySelector('.d-body');
+  const scroll = prev ? prev.scrollTop : 0;
+  const sameTarget = root.dataset.key === (ui.openId ? 'c:'+ui.openId+':'+ui.tab : ui.cell ? 'x:'+ui.cell.id+':'+ui.cell.crit : '');
+  if(ui.openId && getCand(ui.openId)){
+    root.innerHTML = '<div class="overlay" data-act="close-drawer"></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="Карточка кандидата">'+candidatePanel(getCand(ui.openId))+'</aside>';
+    root.dataset.key = 'c:'+ui.openId+':'+ui.tab;
+  } else if(ui.cell && getCand(ui.cell.id)){
+    root.innerHTML = '<div class="overlay" data-act="close-drawer"></div><aside class="drawer compact" role="dialog" aria-modal="true" aria-label="Доказательство">'+cellPanel(getCand(ui.cell.id), CRIT[ui.cell.crit])+'</aside>';
+    root.dataset.key = 'x:'+ui.cell.id+':'+ui.cell.crit;
+  } else {
+    root.innerHTML = ''; root.dataset.key = '';
+    ui.openId = null; ui.cell = null;
+  }
+  const body = root.querySelector('.d-body');
+  if(body && sameTarget) body.scrollTop = scroll;
+  document.body.style.overflow = root.innerHTML ? 'hidden' : '';
+}
+
+function candidatePanel(c){
+  const m = metrics(c);
+  const tabs = [['overview','Обзор'],['eval','Оценка'],['interviews','Интервью и тесты'],['summary','Сводка']];
+  let body = '';
+  if(ui.tab === 'overview') body = tabOverview(c);
+  else if(ui.tab === 'eval') body = tabEval(c);
+  else if(ui.tab === 'interviews') body = tabInterviews(c);
+  else body = tabSummary(c, m);
+  return '<div class="d-head">'+
+    '<div class="d-top"><span class="avatar lg">'+esc(initials(c.name))+'</span>'+
+      '<div style="min-width:0;flex:1"><h2>'+esc(c.name)+'</h2><div class="muted">'+esc(c.position)+'</div>'+
+      '<div class="mini" style="margin-top:6px"><label class="small muted" for="stage-select">Этап</label><select class="select stage-sel" id="stage-select" data-id="'+c.id+'">'+
+        STAGES.map(s => '<option'+(c.stage===s?' selected':'')+'>'+s+'</option>').join('')+'</select>'+statusBadge(m)+'</div></div>'+
+      '<button class="icon-btn d-close" data-act="close-drawer" aria-label="Закрыть">'+ICON.close+'</button></div>'+
+    '<div class="d-stats">'+
+      '<div><span class="h-label">Fit Score</span><b class="num">'+pct(m.fit)+'</b></div>'+
+      '<div><span class="h-label">Evidence Coverage</span><b class="num">'+pct(m.coverage)+'</b></div>'+
+      '<div><span class="h-label">Зарплатные ожидания</span><b class="num">'+tenge(c.salary)+'</b></div>'+
+      '<div><span class="h-label">Бюджет</span><span style="margin-top:2px">'+budgetBadge(c.salary)+'</span></div>'+
+    '</div>'+
+    (needsWarning(m) ? '<div class="callout warn" style="margin-top:8px">'+ICON.warn+'<span>Высокий предварительный балл, но недостаточно подтвержденных данных</span></div>' : '')+
+    '<div class="d-tabs" role="tablist">'+tabs.map(t => '<button class="d-tab'+(ui.tab===t[0]?' active':'')+'" role="tab" aria-selected="'+(ui.tab===t[0])+'" data-act="dtab" data-v="'+t[0]+'">'+t[1]+'</button>').join('')+'</div>'+
+  '</div><div class="d-body">'+body+'</div>';
+}
+
+function tabOverview(c){
+  const f = careerFacts(c);
+  const hist = (c.history || []).slice().sort((a,b) => String(b.start).localeCompare(String(a.start)));
+  return '<div class="panel"><div class="panel-h"><h3>Основные данные</h3><div class="act"><button class="btn sm" data-act="edit-cand" data-id="'+c.id+'">Редактировать</button></div></div>'+
+    '<div class="kv">'+
+      '<div><span class="h-label">Email</span><b>'+esc(c.email || '—')+'</b></div>'+
+      '<div><span class="h-label">Локация</span><b>'+esc(c.location || '—')+'</b></div>'+
+      '<div><span class="h-label">Источник</span><b>'+esc(c.source || '—')+'</b></div>'+
+      '<div><span class="h-label">Возможная дата выхода</span><b class="num">'+fmtDate(c.startDate)+'</b></div>'+
+      '<div><span class="h-label">Зарплатные ожидания</span><b class="num">'+tenge(c.salary)+'</b></div>'+
+      '<div><span class="h-label">Этап</span><b>'+esc(c.stage)+'</b></div>'+
+    '</div>'+
+    '<div style="margin-top:14px"><span class="h-label">Общий комментарий</span><div class="text-block" style="margin-top:4px">'+(c.comment ? esc(c.comment) : '<span class="muted">Комментарий не добавлен</span>')+'</div></div>'+
+  '</div>'+
+  '<div class="panel"><div class="panel-h"><h3>Карьерная история</h3></div>'+
+    (hist.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Компания</th><th>Должность</th><th>Период</th><th>Длительность</th><th>Достижение</th></tr></thead><tbody>'+
+      hist.map(r => '<tr><td><b style="font-weight:600">'+esc(r.company)+'</b></td><td>'+esc(r.role)+'</td><td class="num" style="white-space:nowrap">'+fmtYM(r.start)+' – '+fmtYM(r.end)+'</td><td class="num" style="white-space:nowrap">'+dur(rowMonths(r))+'</td><td style="min-width:220px">'+esc(r.achievement)+'</td></tr>').join('')+
+      '</tbody></table></div>' : '<div class="muted">Карьерная история не заполнена.</div>')+
+    '<div class="facts">'+
+      '<div class="fact"><span class="h-label">Общий опыт</span><b class="num">'+(f?dur(f.total):'Нет данных')+'</b></div>'+
+      '<div class="fact"><span class="h-label">Средняя длительность в компании</span><b class="num">'+(f?dur(f.avg):'Нет данных')+'</b></div>'+
+      '<div class="fact"><span class="h-label">Переходов между компаниями</span><b class="num">'+(f?f.transitions:'Нет данных')+'</b></div>'+
+      '<div class="fact"><span class="h-label">Внутренних повышений</span><b class="num">'+(f?f.promotions:'Нет данных')+'</b></div>'+
+    '</div><div class="small muted" style="margin-top:8px">Факты рассчитаны по датам карьерной истории и не являются оценкой кандидата.</div>'+
+  '</div>'+
+  '<div class="panel"><div class="panel-h"><h3>Резюме</h3></div>'+
+    '<button class="upload" data-act="info" data-k="resume"><span class="muted">'+ICON.doc+'</span><span style="flex:1"><b style="font-weight:600">Загрузить резюме PDF/DOCX</b><br><span class="small muted">В демоверсии используется текст резюме</span></span><span class="badge b-next">Следующий этап</span></button>'+
+    '<div class="text-block" style="margin-top:14px">'+(c.resume ? esc(c.resume) : '<span class="muted">Текст резюме не добавлен. Его можно вставить через «Редактировать».</span>')+'</div>'+
+  '</div>';
+}
+
+function evalCard(c, cr){
+  const e = getEval(c, cr.id), t = tone(e);
+  return '<article class="ecard t-'+t+'-b">'+
+    '<div class="ecard-h"><h4>'+esc(cr.name)+'</h4><span class="badge b-gray num">'+cr.w+'%</span>'+(cr.req?'<span class="badge b-req">Обязательный</span>':'')+'</div>'+
+    '<div class="score-row">'+scorePill(e)+evStatusBadge(e)+(e.score?'<span class="small muted">'+SCORE_TEXT[e.score]+'</span>':'')+'</div>'+
+    '<div class="field-row"><span>Источник</span>'+(e.source ? esc(e.source) : '<span class="muted" style="display:inline;font-size:13px">Не указан</span>')+'</div>'+
+    '<div class="quote'+(e.fact?'':' empty-q')+'">'+(e.fact ? esc(e.fact) : 'Факт или цитата не добавлены')+'</div>'+
+    (e.comment ? '<div class="field-row"><span>Комментарий</span>'+esc(e.comment)+'</div>' : '')+
+    (e.question ? '<div class="qbox"><span>Вопрос для проверки</span>'+esc(e.question)+'</div>' : '')+
+    '<div class="foot"><button class="btn sm" data-act="edit-eval" data-id="'+c.id+'" data-crit="'+cr.id+'">Изменить</button></div>'+
+  '</article>';
+}
+function tabEval(c){
+  const m = metrics(c);
+  return '<div class="callout info" style="margin-bottom:12px">'+ICON.info+'<span>Fit Score считается только по оцененным критериям; «Нет данных» не превращается в ноль. Evidence Coverage — доля веса критериев, где есть оценка и источник. Сейчас: Fit '+pct(m.fit)+', Coverage '+pct(m.coverage)+'.</span></div>'+
+    '<div class="ecards">'+CRITERIA.map(cr => evalCard(c, cr)).join('')+'</div>';
+}
+
+function tabInterviews(c){
+  const ints = (c.interviews || []).slice().sort((a,b) => String(b.date).localeCompare(String(a.date)));
+  const tests = (c.tests || []).slice().sort((a,b) => String(b.date).localeCompare(String(a.date)));
+  return '<div class="panel"><div class="panel-h"><h3>Интервью</h3><span class="badge b-gray num">'+ints.length+'</span><div class="act">'+
+      '<button class="btn sm" data-act="info" data-k="transcript">Загрузить транскрипт <span class="badge b-next">Следующий этап</span></button>'+
+      '<button class="btn sm primary" data-act="add-int" data-id="'+c.id+'">+ Добавить интервью</button></div></div>'+
+    (ints.length ? '<div class="icards">'+ints.map(i => {
+      const cr = CRIT[i.criterion];
+      return '<div class="icard"><div class="icard-h"><b>'+esc(i.type)+'</b><span class="muted num">'+fmtDate(i.date)+'</span><span class="muted">· '+esc(i.interviewer)+'</span>'+
+        '<span style="margin-left:auto" class="mini">'+(cr?'<span class="badge b-gray">'+esc(cr.name)+'</span>':'')+(i.score?scorePill({score:i.score,status:'confirmed'}):'')+'</span></div>'+
+        '<div><span class="small muted">Вопрос</span><div>'+esc(i.question)+'</div></div>'+
+        (i.answer ? '<div><span class="small muted">Ответ (кратко)</span><div class="quote">'+esc(i.answer)+'</div></div>' : '')+
+        (i.observation ? '<div><span class="small muted">Наблюдение</span><div>'+esc(i.observation)+'</div></div>' : '')+
+        (i.nextQuestion ? '<div class="qbox"><span>Проверить дальше</span>'+esc(i.nextQuestion)+'</div>' : '')+
+      '</div>';
+    }).join('')+'</div>' : '<div class="empty" style="padding:20px"><b>Интервью пока нет</b>Добавьте первое интервью, чтобы зафиксировать вопросы и ответы.</div>')+
+  '</div>'+
+  '<div class="panel"><div class="panel-h"><h3>Тесты</h3><span class="badge b-gray num">'+tests.length+'</span><div class="act">'+
+      '<button class="btn sm" data-act="info" data-k="testreport">Загрузить отчет тестирования <span class="badge b-next">Следующий этап</span></button>'+
+      '<button class="btn sm primary" data-act="add-test" data-id="'+c.id+'">+ Добавить результат</button></div></div>'+
+    (tests.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Название</th><th>Дата</th><th>Балл</th><th>Макс.</th><th>Процент</th><th>Критерий</th><th>Комментарий</th></tr></thead><tbody>'+
+      tests.map(t => { const p = t.max > 0 ? t.score / t.max * 100 : null; return '<tr><td><b style="font-weight:600">'+esc(t.name)+'</b></td><td class="num">'+fmtDate(t.date)+'</td><td class="num">'+t.score+'</td><td class="num">'+t.max+'</td><td>'+bar(p,'fit')+'</td><td>'+(CRIT[t.criterion]?esc(CRIT[t.criterion].name):'—')+'</td><td style="min-width:200px">'+esc(t.comment||'—')+'</td></tr>'; }).join('')+
+    '</tbody></table></div>' : '<div class="empty" style="padding:20px"><b>Результатов тестов пока нет</b>Добавьте результат, процент рассчитается автоматически.</div>')+
+  '</div>';
+}
+
+function tabSummary(c, m){
+  const a = analysis(c);
+  const li = (badge, text) => '<li>'+badge+'<span>'+text+'</span></li>';
+  return '<div class="panel"><div class="panel-h"><h3>Сводка по кандидату</h3><div class="act">'+
+      '<button class="btn sm" data-act="cmp-from-card" data-id="'+c.id+'">Сравнить</button>'+
+      '<button class="btn sm primary" data-act="copy-summary" data-id="'+c.id+'">Скопировать сводку</button></div></div>'+
+    '<div class="sum-grid">'+
+      '<div class="fact"><span class="h-label">Предварительный статус</span><div style="margin-top:4px">'+statusBadge(m)+'</div></div>'+
+      '<div class="fact"><span class="h-label">Fit Score</span><b class="num">'+pct(m.fit)+'</b></div>'+
+      '<div class="fact"><span class="h-label">Evidence Coverage</span><b class="num">'+pct(m.coverage)+'</b></div>'+
+      '<div class="fact"><span class="h-label">Бюджет</span><div style="margin-top:4px">'+budgetBadge(c.salary)+' <span class="small num">'+tenge(c.salary)+'</span></div></div>'+
+    '</div>'+
+    (needsWarning(m) ? '<div class="callout warn" style="margin-top:12px">'+ICON.warn+'<span>Вывод предварительный: требуется дополнительная проверка</span></div>' : '')+
+  '</div>'+
+  '<div class="grid2" style="margin-top:14px">'+
+    '<div class="panel" style="margin:0"><div class="panel-h"><h3>Сильные подтвержденные критерии</h3></div>'+
+      (a.strengths.length ? '<ul class="sum-list">'+a.strengths.map(x => li(scorePill(x.e), '<b>'+esc(x.cr.name)+'</b><br>'+esc(x.e.fact)+' <span class="muted small">('+esc(x.e.source)+')</span>')).join('')+'</ul>' : '<div class="muted small">Нет подтвержденных оценок 4–5.</div>')+'</div>'+
+    '<div class="panel" style="margin:0"><div class="panel-h"><h3>Обязательные критерии с рисками</h3></div>'+
+      (a.reqRisks.length ? '<ul class="sum-list">'+a.reqRisks.map(x => li('<span class="badge '+(x.reason==='Нет данных'?'b-gray':x.reason.startsWith('Оценка')||x.reason.startsWith('Противоречивые')?'b-risk':'b-warn')+'">'+esc(x.reason)+'</span>', esc(x.cr.name))).join('')+'</ul>' : '<div class="muted small">Рисков по обязательным критериям не зафиксировано.</div>')+'</div>'+
+    '<div class="panel" style="margin:0"><div class="panel-h"><h3>Критерии без данных</h3></div>'+
+      (a.missing.length ? '<ul class="sum-list">'+a.missing.map(cr => li('<span class="badge b-gray num">'+cr.w+'%</span>', esc(cr.name)+(cr.req?' <span class="badge b-req">Обязательный</span>':''))).join('')+'</ul>' : '<div class="muted small">Все критерии оценены.</div>')+'</div>'+
+    '<div class="panel" style="margin:0"><div class="panel-h"><h3>Вопросы для следующего интервью</h3></div>'+
+      (a.questions.length ? '<ul class="sum-list">'+a.questions.map((q,i) => li('<span class="badge b-blue num">'+(i+1)+'</span>', '<b>'+esc(q.crit)+':</b> '+esc(q.text))).join('')+'</ul>' : '<div class="muted small">Вопросы не заданы.</div>')+'</div>'+
+  '</div>'+disclaimer();
+}
+
+function summaryText(c){
+  const m = metrics(c), a = analysis(c), b = budgetFit(c.salary);
+  const L = [];
+  L.push('Кандидат: ' + c.name + ' — ' + c.position);
+  L.push('Вакансия: ' + VACANCY.title + ' (' + VACANCY.dept + ', ' + VACANCY.format + ')');
+  L.push('Этап: ' + c.stage);
+  L.push('Предварительный статус: ' + STATUS_META[m.status].label);
+  L.push('Fit Score: ' + pct(m.fit) + ' | Evidence Coverage: ' + pct(m.coverage));
+  L.push('Зарплатные ожидания: ' + tenge(c.salary) + ' — ' + b.label + ' (бюджет ' + nf.format(VACANCY.min) + '–' + nf.format(VACANCY.max) + ' ₸)');
+  if(needsWarning(m)) L.push('Вывод предварительный: требуется дополнительная проверка');
+  L.push('');
+  L.push('Сильные подтвержденные критерии:');
+  if(a.strengths.length) a.strengths.forEach(x => L.push('— ' + x.cr.name + ' (' + x.e.score + '/5, ' + x.e.source + '): ' + x.e.fact)); else L.push('— нет');
+  L.push('');
+  L.push('Обязательные критерии с рисками:');
+  if(a.reqRisks.length) a.reqRisks.forEach(x => L.push('— ' + x.cr.name + ': ' + x.reason)); else L.push('— нет');
+  L.push('');
+  L.push('Критерии без данных:');
+  if(a.missing.length) a.missing.forEach(cr => L.push('— ' + cr.name + ' (' + cr.w + '%)')); else L.push('— нет');
+  L.push('');
+  L.push('Вопросы для следующего интервью:');
+  if(a.questions.length) a.questions.forEach((q,i) => L.push((i+1) + '. ' + q.crit + ': ' + q.text)); else L.push('— нет');
+  L.push('');
+  L.push(DISCLAIMER + '.');
+  return L.join('\n');
+}
+
+function cellPanel(c, cr){
+  const e = getEval(c, cr.id);
+  return '<div class="d-head" style="padding-bottom:14px"><div class="d-top"><div style="flex:1;min-width:0"><div class="h-label">'+esc(c.name)+'</div><h2 style="font-size:16px;margin-top:2px">'+esc(cr.name)+'</h2>'+
+    '<div class="mini" style="margin-top:6px"><span class="badge b-gray num">Вес '+cr.w+'%</span>'+(cr.req?'<span class="badge b-req">Обязательный</span>':'')+'</div></div>'+
+    '<button class="icon-btn" data-act="close-drawer" aria-label="Закрыть">'+ICON.close+'</button></div></div>'+
+    '<div class="d-body" style="display:grid;gap:14px;align-content:start">'+
+      '<div class="score-row">'+scorePill(e)+evStatusBadge(e)+'</div>'+
+      (e.score ? '<div class="small muted">'+SCORE_TEXT[e.score]+'</div>' : '')+
+      '<div class="field-row"><span>Источник</span>'+(e.source ? esc(e.source) : 'Не указан')+'</div>'+
+      '<div class="field-row"><span>Факт или цитата</span><div class="quote'+(e.fact?'':' empty-q')+'" style="margin-top:4px">'+(e.fact ? esc(e.fact) : 'Не добавлены')+'</div></div>'+
+      '<div class="field-row"><span>Комментарий</span>'+(e.comment ? esc(e.comment) : '<span class="muted" style="display:inline;font-size:13px">—</span>')+'</div>'+
+      '<div class="qbox"><span>Вопрос для проверки</span>'+(e.question ? esc(e.question) : '—')+'</div>'+
+      '<div class="mini"><button class="btn primary" data-act="edit-eval" data-id="'+c.id+'" data-crit="'+cr.id+'">Изменить</button>'+
+      '<button class="btn" data-act="open" data-id="'+c.id+'">Открыть карточку</button></div>'+
+    '</div>';
+}
+
+/* ---------- Модальные окна ---------- */
+let modalSubmit = null;
+function openModal(o){
+  const root = $('#modal-root');
+  const footer = o.info
+    ? '<button type="button" class="btn primary" data-act="close-modal">Понятно</button>'
+    : '<button type="button" class="btn" data-act="close-modal">Отмена</button><button type="submit" class="btn '+(o.danger?'danger':'primary')+'">'+(o.submitLabel||'Сохранить')+'</button>';
+  root.innerHTML = '<div class="m-overlay" data-act="modal-bg"><form class="modal'+(o.wide?' wide':'')+'" role="dialog" aria-modal="true" aria-label="'+esc(o.title)+'" novalidate>'+
+    '<div class="m-head"><h3>'+esc(o.title)+'</h3>'+(o.badge?o.badge:'')+'<button type="button" class="icon-btn" style="margin-left:auto" data-act="close-modal" aria-label="Закрыть">'+ICON.close+'</button></div>'+
+    '<div class="m-body">'+o.body+'</div><div class="m-foot">'+footer+'</div></form></div>';
+  modalSubmit = o.onSubmit || null;
+  const form = root.querySelector('form');
+  form.addEventListener('submit', ev => {
+    ev.preventDefault();
+    if(!modalSubmit){ closeModal(); return; }
+    form.querySelectorAll('.f').forEach(f => f.classList.remove('invalid'));
+    const fd = Object.fromEntries(new FormData(form).entries());
+    const errs = modalSubmit(fd, form);
+    if(errs && Object.keys(errs).length){
+      Object.entries(errs).forEach(([k,msg]) => {
+        const f = form.querySelector('.f[data-f="'+k+'"]');
+        if(f){ f.classList.add('invalid'); const er = f.querySelector('.err'); if(er) er.textContent = msg; }
+      });
+      const first = form.querySelector('.f.invalid input, .f.invalid select, .f.invalid textarea');
+      if(first) first.focus();
+      return;
+    }
+    closeModal();
+  });
+  if(o.onMount) o.onMount(form);
+  const focusEl = form.querySelector('input:not([type=hidden]), select, textarea') || form.querySelector('[type=submit], .btn.primary');
+  if(focusEl) focusEl.focus();
+}
+function closeModal(){ $('#modal-root').innerHTML = ''; modalSubmit = null; }
+function info(title, text){ openModal({title, info:true, badge:'<span class="badge b-next">Следующий этап</span>', body:'<p style="margin:0;line-height:1.55">'+esc(text)+'</p>'}); }
+
+function fld(name, label, input, opts){
+  opts = opts || {};
+  return '<div class="f'+(opts.full?' full':'')+(opts.cls?' '+opts.cls:'')+'" data-f="'+name+'"><label for="f-'+name+'">'+label+(opts.req?' <span class="req">*</span>':'')+'</label>'+input+
+    (opts.hint?'<span class="hint">'+opts.hint+'</span>':'')+'<span class="err"></span></div>';
+}
+function inp(name, val, type, attrs){ return '<input id="f-'+name+'" name="'+name+'" type="'+(type||'text')+'" value="'+esc(val==null?'':val)+'" '+(attrs||'')+'>'; }
+function sel(name, options, val, placeholder){
+  return '<select id="f-'+name+'" name="'+name+'">'+(placeholder!=null?'<option value="">'+placeholder+'</option>':'')+
+    options.map(o => { const v = Array.isArray(o)?o[0]:o, l = Array.isArray(o)?o[1]:o; return '<option value="'+esc(v)+'"'+(String(val)===String(v)?' selected':'')+'>'+esc(l)+'</option>'; }).join('')+'</select>';
+}
+function ta(name, val, rows){ return '<textarea id="f-'+name+'" name="'+name+'" rows="'+(rows||3)+'">'+esc(val||'')+'</textarea>'; }
+
+function candidateForm(c){
+  const isNew = !c;
+  c = c || {name:'',position:'',location:'',email:'',source:'',stage:'Новый',salary:'',startDate:'',comment:'',resume:''};
+  openModal({
+    title: isNew ? 'Новый кандидат' : 'Редактировать кандидата', wide:true, submitLabel: isNew ? 'Добавить кандидата' : 'Сохранить',
+    body:'<div class="f-grid">'+
+      fld('name','Имя и фамилия', inp('name', c.name, 'text', 'autocomplete="off"'), {req:true})+
+      fld('position','Текущая должность', inp('position', c.position), {req:true})+
+      fld('location','Локация', inp('location', c.location))+
+      fld('email','Email', inp('email', c.email, 'email'))+
+      fld('source','Источник кандидата', sel('source', CAND_SOURCES, c.source, 'Не указан'))+
+      fld('stage','Этап', sel('stage', STAGES, c.stage))+
+      fld('salary','Зарплатные ожидания, ₸', inp('salary', c.salary || '', 'number', 'min="0" step="10000" inputmode="numeric"'), {hint:'Бюджет вакансии: '+nf.format(VACANCY.min)+' – '+nf.format(VACANCY.max)+' ₸'})+
+      fld('startDate','Возможная дата выхода', inp('startDate', c.startDate, 'date'))+
+      fld('comment','Общий комментарий', ta('comment', c.comment, 2), {full:true})+
+      fld('resume','Текст резюме', ta('resume', c.resume, 6), {full:true})+
+    '</div>',
+    onSubmit:(d) => {
+      const e = {};
+      if(!d.name.trim()) e.name = 'Укажите имя и фамилию';
+      if(!d.position.trim()) e.position = 'Укажите текущую должность';
+      if(d.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email.trim())) e.email = 'Проверьте формат email';
+      const sal = d.salary === '' ? null : Number(d.salary);
+      if(sal != null && (!isFinite(sal) || sal < 0)) e.salary = 'Введите сумму числом';
+      if(Object.keys(e).length) return e;
+      const patch = {name:d.name.trim(), position:d.position.trim(), location:d.location.trim(), email:d.email.trim(),
+        source:d.source, stage:d.stage, salary:sal, startDate:d.startDate, comment:d.comment.trim(), resume:d.resume.trim()};
+      if(isNew){
+        const nc = Object.assign({id:uid('c'), history:[], evals:emptyEvals(), interviews:[], tests:[]}, patch);
+        state.candidates.push(nc);
+        save(); renderAll(); toast('Кандидат добавлен: '+nc.name);
+      } else {
+        Object.assign(c, patch); save(); renderAll(); toast('Данные кандидата сохранены');
+      }
+    }
+  });
+}
+
+function evalForm(c, cr){
+  const e = getEval(c, cr.id);
+  const scoreVal = e.score ? String(e.score) : (e.status === 'none' && (e.question || e.comment) ? 'none' : '');
+  openModal({
+    title:'Оценка: '+cr.name, wide:true,
+    badge:'<span class="badge b-gray num">'+cr.w+'%</span>'+(cr.req?'<span class="badge b-req">Обязательный</span>':''),
+    body:'<div class="small muted">'+esc(c.name)+'</div><div class="f-grid">'+
+      fld('score','Оценка', sel('score', [['none','Нет данных']].concat([1,2,3,4,5].map(n => [String(n), n+' — '+SCORE_TEXT[n].toLowerCase()])), scoreVal, 'Выберите оценку'), {req:true})+
+      fld('status','Статус доказательности', sel('status', [['confirmed',EV_STATUS.confirmed],['check',EV_STATUS.check],['conflict',EV_STATUS.conflict]], e.status==='none'?'confirmed':e.status), {cls:'only-scored'})+
+      fld('source','Источник', sel('source', EV_SOURCES, e.source, 'Выберите источник'), {req:true, cls:'only-scored'})+
+      '<div class="f only-none" data-f="nd"><div class="callout info">'+ICON.info+'<span>«Нет данных» не учитывается в Fit Score как ноль и не входит в Evidence Coverage.</span></div></div>'+
+      fld('fact','Факт или короткая цитата', ta('fact', e.fact, 2), {req:true, full:true, cls:'only-scored', hint:'Конкретный проверяемый факт: что сделано, результат, цифры.'})+
+      fld('comment','Комментарий', ta('comment', e.comment, 2), {full:true})+
+      fld('question','Вопрос для проверки', ta('question', e.question, 2), {full:true})+
+    '</div>',
+    onMount:(form) => {
+      const s = form.querySelector('#f-score');
+      const sync = () => {
+        const none = s.value === 'none';
+        form.querySelectorAll('.only-scored').forEach(el => el.hidden = none);
+        form.querySelectorAll('.only-none').forEach(el => el.hidden = !none);
+      };
+      s.addEventListener('change', sync); sync();
+    },
+    onSubmit:(d) => {
+      const er = {};
+      if(!d.score) er.score = 'Выберите оценку или «Нет данных»';
+      if(d.score && d.score !== 'none'){
+        if(!d.source) er.source = 'Укажите источник';
+        if(!d.fact || !d.fact.trim()) er.fact = 'Добавьте факт или цитату';
+      }
+      if(Object.keys(er).length) return er;
+      if(d.score === 'none') c.evals[cr.id] = noData((d.question||'').trim());
+      else c.evals[cr.id] = ev(Number(d.score), d.status || 'confirmed', d.source, d.fact.trim(), (d.comment||'').trim(), (d.question||'').trim());
+      if(d.score === 'none') c.evals[cr.id].comment = (d.comment||'').trim();
+      save(); renderAll();
+      const m = metrics(c);
+      toast('Оценка сохранена · Fit '+pct(m.fit)+' · Coverage '+pct(m.coverage));
+    }
+  });
+}
+
+function interviewForm(c){
+  openModal({
+    title:'Новое интервью', wide:true,
+    body:'<div class="small muted">'+esc(c.name)+'</div><div class="f-grid">'+
+      fld('type','Тип интервью', sel('type', INTERVIEW_TYPES, 'HR-интервью'), {req:true})+
+      fld('date','Дата', inp('date', todayISO(), 'date'), {req:true})+
+      fld('interviewer','Интервьюер', inp('interviewer', '', 'text', 'placeholder="Имя, роль"'), {req:true})+
+      fld('criterion','Связанный критерий', sel('criterion', CRITERIA.map(cr => [cr.id, cr.name]), '', 'Не связан'))+
+      fld('question','Вопрос', ta('question','',2), {req:true, full:true})+
+      fld('answer','Ответ кандидата', ta('answer','',3), {full:true, hint:'Кратко, своими словами или короткой цитатой.'})+
+      fld('observation','Наблюдение', ta('observation','',2), {full:true, hint:'Только о содержании ответа: факты, примеры, цифры.'})+
+      fld('score','Оценка', sel('score', [1,2,3,4,5].map(n => [String(n), n+' — '+SCORE_TEXT[n].toLowerCase()]), '', 'Без оценки'))+
+      fld('nextQuestion','Вопрос для следующей проверки', inp('nextQuestion',''))+
+    '</div>',
+    onSubmit:(d) => {
+      const er = {};
+      if(!d.date) er.date = 'Укажите дату';
+      if(!d.interviewer.trim()) er.interviewer = 'Укажите интервьюера';
+      if(!d.question.trim()) er.question = 'Добавьте вопрос';
+      if(Object.keys(er).length) return er;
+      c.interviews = c.interviews || [];
+      c.interviews.push({id:uid('i'), type:d.type, date:d.date, interviewer:d.interviewer.trim(), question:d.question.trim(), answer:d.answer.trim(),
+        observation:d.observation.trim(), criterion:d.criterion, score:d.score?Number(d.score):null, nextQuestion:d.nextQuestion.trim()});
+      save(); renderAll(); toast('Интервью добавлено');
+    }
+  });
+}
+
+function testForm(c){
+  openModal({
+    title:'Результат теста',
+    body:'<div class="small muted">'+esc(c.name)+'</div><div class="f-grid">'+
+      fld('name','Название теста', inp('name',''), {req:true, full:true})+
+      fld('date','Дата', inp('date', todayISO(), 'date'), {req:true})+
+      fld('criterion','Связанный критерий', sel('criterion', CRITERIA.map(cr => [cr.id, cr.name]), '', 'Не связан'))+
+      fld('score','Результат', inp('score','','number','min="0" step="any" inputmode="decimal"'), {req:true})+
+      fld('max','Максимальный балл', inp('max','','number','min="0" step="any" inputmode="decimal"'), {req:true})+
+      '<div class="f full"><span class="h-label">Процент</span><span class="pct-out num" id="pct-out">—</span></div>'+
+      fld('comment','Комментарий', ta('comment','',2), {full:true})+
+    '</div>',
+    onMount:(form) => {
+      const upd = () => {
+        const s = parseFloat(form.querySelector('#f-score').value), m = parseFloat(form.querySelector('#f-max').value);
+        form.querySelector('#pct-out').textContent = (isFinite(s) && isFinite(m) && m > 0) ? Math.round(s/m*100)+'%' : '—';
+      };
+      form.querySelector('#f-score').addEventListener('input', upd);
+      form.querySelector('#f-max').addEventListener('input', upd);
+    },
+    onSubmit:(d) => {
+      const er = {};
+      const s = parseFloat(d.score), m = parseFloat(d.max);
+      if(!d.name.trim()) er.name = 'Укажите название теста';
+      if(!d.date) er.date = 'Укажите дату';
+      if(!isFinite(s) || s < 0) er.score = 'Введите результат числом';
+      if(!isFinite(m) || m <= 0) er.max = 'Максимальный балл должен быть больше 0';
+      else if(isFinite(s) && s > m) er.score = 'Результат не может превышать максимум';
+      if(Object.keys(er).length) return er;
+      c.tests = c.tests || [];
+      c.tests.push({id:uid('t'), name:d.name.trim(), date:d.date, score:s, max:m, criterion:d.criterion, comment:d.comment.trim()});
+      save(); renderAll(); toast('Результат теста добавлен: '+Math.round(s/m*100)+'%');
+    }
+  });
+}
+
+/* ---------- Выбор для сравнения ---------- */
+function toggleSel(id){
+  const i = state.selected.indexOf(id);
+  if(i >= 0) state.selected.splice(i,1);
+  else {
+    if(state.selected.length >= 3){ toast('Можно сравнить не более трех кандидатов'); renderAll(); return; }
+    state.selected.push(id);
+  }
+  save(); renderAll();
+}
+
+async function copyText(text){
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){ await navigator.clipboard.writeText(text); return true; }
+  }catch(e){}
+  try{
+    const t = document.createElement('textarea');
+    t.value = text; t.setAttribute('readonly',''); t.style.position = 'fixed'; t.style.opacity = '0';
+    document.body.appendChild(t); t.select();
+    const ok = document.execCommand('copy'); t.remove(); return ok;
+  }catch(e){ return false; }
+}
+
+function renderAll(){ renderNav(); renderMain(); renderDrawer(); }
+
+/* ---------- События ---------- */
+document.addEventListener('click', async ev => {
+  const el = ev.target.closest('[data-act]');
+  if(ui.menu && !ev.target.closest('#menu') && !ev.target.closest('#menu-btn')){ ui.menu = false; renderNav(); }
+  if(!el) return;
+  const act = el.dataset.act, id = el.dataset.id;
+  switch(act){
+    case 'view': ui.view = el.dataset.view; ui.openId = null; ui.cell = null; renderAll(); window.scrollTo(0,0); break;
+    case 'menu': ui.menu = !ui.menu; renderNav(); break;
+    case 'restore':
+      ui.menu = false; renderNav();
+      openModal({title:'Восстановить демоданные?', danger:true, submitLabel:'Восстановить',
+        body:'<p style="margin:0;line-height:1.55">Все добавленные кандидаты, изменения оценок, интервью и тесты будут удалены. Будут загружены исходные демонстрационные данные. Действие нельзя отменить.</p>',
+        onSubmit:() => { state = demoData(); save(); ui.openId = null; ui.cell = null; ui.search=''; ui.stage='all'; ui.mSearch=''; renderAll(); toast('Демоданные восстановлены'); }});
+      break;
+    case 'criteria-info': openModal({title:'Настройка критериев', info:true, badge:'<span class="badge b-next">Следующий этап</span>',
+        body:'<p style="margin:0 0 12px;line-height:1.55">В следующей версии рекрутер сможет создавать критерии, задавать веса и шкалы под каждую вакансию.</p>'+
+          '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Критерий</th><th>Вес</th><th></th></tr></thead><tbody>'+
+          CRITERIA.map(cr => '<tr><td>'+esc(cr.name)+'</td><td class="num">'+cr.w+'%</td><td>'+(cr.req?'<span class="badge b-req">Обязательный</span>':'')+'</td></tr>').join('')+
+          '<tr><td><b>Итого</b></td><td class="num"><b>'+CRITERIA.reduce((s,c)=>s+c.w,0)+'%</b></td><td></td></tr></tbody></table></div>'}); break;
+    case 'add-cand': candidateForm(null); break;
+    case 'open': ev.stopPropagation(); ui.openId = id; ui.cell = null; ui.tab = 'overview'; renderDrawer(); break;
+    case 'toggle-sel': ev.stopPropagation(); toggleSel(id); break;
+    case 'go-compare': if(state.selected.length >= 2){ ui.view = 'compare'; renderAll(); window.scrollTo(0,0); } break;
+    case 'reset-filters': ui.search = ''; ui.stage = 'all'; renderMain(); break;
+    case 'reset-msearch': ui.mSearch = ''; renderMain(); break;
+    case 'req': ui.reqOnly = el.dataset.v === '1'; renderMain(); break;
+    case 'mode': ui.mode = el.dataset.v; renderMain(); break;
+    case 'cell': ui.cell = {id, crit:el.dataset.crit}; ui.openId = null; renderDrawer(); break;
+    case 'close-drawer': ui.openId = null; ui.cell = null; renderDrawer(); break;
+    case 'dtab': ui.tab = el.dataset.v; renderDrawer(); break;
+    case 'edit-cand': candidateForm(getCand(id)); break;
+    case 'edit-eval': evalForm(getCand(id), CRIT[el.dataset.crit]); break;
+    case 'add-int': interviewForm(getCand(id)); break;
+    case 'add-test': testForm(getCand(id)); break;
+    case 'info': {
+      const k = el.dataset.k;
+      if(k === 'resume') info('Загрузка резюме', 'После подключения защищенного хранения и AI система сможет извлекать из резюме опыт, навыки и подтверждающие фрагменты. В демоверсии используется текст резюме.');
+      else if(k === 'transcript') info('Загрузка транскрипта', 'После подключения защищенного хранения можно будет прикреплять транскрипт интервью и связывать его фрагменты с критериями. В демоверсии ответы кандидата вносятся вручную через «+ Добавить интервью».');
+      else info('Загрузка отчета тестирования', 'После подключения защищенного хранения можно будет прикреплять отчеты тестовых платформ. В демоверсии результат вносится вручную через «+ Добавить результат», процент рассчитывается автоматически.');
+      break;
+    }
+    case 'copy-summary': {
+      const ok = await copyText(summaryText(getCand(id)));
+      toast(ok ? 'Сводка скопирована' : 'Не удалось скопировать: браузер запретил доступ к буферу обмена');
+      break;
+    }
+    case 'cmp-from-card': {
+      if(!state.selected.includes(id)){
+        if(state.selected.length >= 3){ toast('Можно сравнить не более трех кандидатов. Уберите одного из сравнения'); break; }
+        state.selected.push(id); save();
+      }
+      if(state.selected.length >= 2){ ui.openId = null; ui.view = 'compare'; renderAll(); window.scrollTo(0,0); }
+      else { renderAll(); toast('Кандидат добавлен к сравнению. Выберите еще одного'); }
+      break;
+    }
+    case 'close-modal': closeModal(); break;
+    case 'modal-bg': if(ev.target === el) closeModal(); break;
+  }
+});
+document.addEventListener('input', ev => {
+  if(ev.target.id === 'cand-search'){ ui.search = ev.target.value; renderCandTable(); }
+  if(ev.target.id === 'm-search'){ ui.mSearch = ev.target.value; renderMatrixTable(); }
+});
+document.addEventListener('change', ev => {
+  if(ev.target.id === 'stage-filter'){ ui.stage = ev.target.value; renderCandTable(); }
+  if(ev.target.id === 'stage-select'){
+    const c = getCand(ev.target.dataset.id);
+    if(c){ c.stage = ev.target.value; save(); renderAll(); toast('Этап обновлен: '+c.stage); }
+  }
+});
+document.addEventListener('keydown', ev => {
+  if(ev.key === 'Escape'){
+    if($('#modal-root').innerHTML){ closeModal(); return; }
+    if(ui.menu){ ui.menu = false; renderNav(); return; }
+    if(ui.openId || ui.cell){ ui.openId = null; ui.cell = null; renderDrawer(); }
+  }
+  if(ev.key === 'Enter' && ev.target.matches && ev.target.matches('tr.row')){ ui.openId = ev.target.dataset.id; ui.tab = 'overview'; renderDrawer(); }
+});
+
+renderAll();
+})();
+</script>
+</body></html>
